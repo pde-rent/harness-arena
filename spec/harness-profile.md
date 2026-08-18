@@ -3,9 +3,10 @@
 Static and resource facts about each harness, recorded once per version and carried into every
 result file and every view.
 
-Host-state leakage is part of this profile and is reported at the **top level** of every
-comparison, not in a footnote: it changes cost, behaviour, reproducibility and privacy on a
-real machine, and no harness discloses it.
+Host-state leakage is recorded here as a **qualitative** product property — which paths a
+harness reads, whether that can be suppressed, whether it can replace its own system prompt or
+acquire tools from the host. The measured magnitudes are specific to the machine they were taken
+on and are published as disclosure, never as a comparison axis.
 
 **This never enters the run score.** A harness does not win for being a small binary. The
 profile exists to explain *why* two harnesses diverge while running identical model weights —

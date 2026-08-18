@@ -1,5 +1,14 @@
 # Host-state leakage
 
+> **Scope, stated up front.** These magnitudes were measured on one developer's machine and are
+> a property of **that machine's dotfiles**, not of the harnesses. "Claude Code costs 30% more"
+> is not a finding — "Claude Code reads `~/.claude` and this machine had 8k tokens of it" is.
+> The *capability* to read host state is the product property; the number is not transferable.
+>
+> **This is not the benchmark baseline.** The benchmark has exactly one baseline — a clean
+> container with an identical instruction file for every harness (see `spec/baseline.md`).
+> Everything below is a secondary observation, published as disclosure rather than as a score.
+
 What each harness reads from the developer's machine that the task never asked for.
 
 Found while containerising the benchmark: the same harness, same prompt, same model, produced
@@ -46,14 +55,15 @@ behaviour on a real machine are not the ones in any published figure.
 **5. Unsuppressable pickup.** cline and gemini-cli read workspace rules with no available
 switch. For a benchmark that is a declared bias; for a user it means no way to get a clean run.
 
-## Why this belongs in the top-level comparison
+## Why it is still worth publishing
 
-It changes conclusions, not just numbers:
+Not as a ranking. As disclosure — these are the parts that hold on any machine:
 
 - **Reproducibility.** Two engineers on the same repo get different agent behaviour because of
   files outside it. Bug reports are not comparable.
-- **Cost.** Claude Code's real-world prompt was **44% larger** than its stock prompt on this
-  machine. Every published token or price figure is a floor, not an estimate.
+- **Cost.** A harness's real-world prompt can be far larger than its stock prompt — 44% larger
+  in one case here. Any published token or price figure is a floor, and the gap depends on the
+  user's own files.
 - **Security and privacy.** These are files on a developer's machine being read and shipped to
   a provider without a prompt or a log line. Credentials in a rules file, a private
   architecture note, a client name — all leave the machine silently.
