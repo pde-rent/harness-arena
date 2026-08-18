@@ -19,10 +19,26 @@ same model, same provider, measured at the wire:
 | hermes | 13,352 |
 | Claude Code | 27,344 |
 
-The floor is not the whole story. aider is cheapest because it starts blind — no repo map, no
-index (`spec/fairness.md`, "Known and accepted") — and pays for it in turns instead. The
-quantity that matters is `goodput` (`spec/metrics.md`): tokens spent per unit of graded
-progress.
+**Caveat, and it is a serious one.** `docs/fixed-context-open-question.md` blocks that table from
+publication: `promptTokens` means different things on OpenAI-shape versus Anthropic-shape APIs
+(the former includes cache reads, the latter does not), and several harnesses set explicit
+`cache_control` breakpoints, so a heavy-caching harness reports a small *uncached* prompt while
+sending the same context. Treat the column above as ordinal at best.
+
+This study independently reproduces the contradiction that doc flags in §3: opencode's tool
+descriptions measure ≈11k tokens on their own (see §5), against an observed 6,172-token prompt.
+Both cannot be true on the same basis. That is evidence the observed figure is a cached or
+partial reading, not that the tool surface is small.
+
+Two consequences for the recommendations below. First, ranking by "floor" alone is unsafe — the
+replacement decomposition (`contextTokens` / `billedInputTokens` / `cacheHitRate`) is the right
+target. Second, that decomposition makes R3 (cache stability) more important, not less: a change
+that does not move `contextTokens` at all can move `billedInputTokens` by an order of magnitude.
+
+The floor is also not the whole story behaviourally. aider is cheapest partly because it starts
+blind — no repo map under `--no-git` (`spec/fairness.md`, "Known and accepted") — and pays for it
+in turns instead. The quantity that matters is `goodput` (`spec/metrics.md`): tokens spent per
+unit of graded progress.
 
 ---
 
@@ -500,3 +516,574 @@ max_bytes`; bash buffers `maxBytes*2` and spills to a file kept 7 days. webfetch
 Retryable predicate `/429|500|502|503|504|524/` plus rate-limit and overloaded regexes
 (`oc.txt:111125`). Hard step ceiling emitting *"CRITICAL - MAXIMUM STEPS REACHED … Tools are
 disabled until next user input"* (`:112688`).
+
+---
+
+## 6. cline and aider
+
+### cline (CLI v3.0.55)
+
+Installed at `~/.bench-harnesses/cline/node_modules/@cline/*`. The prompts ship as plain string
+constants in the type declarations, so they can be read exactly rather than recovered from a
+bundle.
+
+**Correction to a common assumption:** this CLI does **not** use XML-in-prompt pseudo-tools. That
+was the VSCode extension's design. The CLI uses native function calling with JSON schemas —
+verified by `toJSONSchema` usage in `@cline/shared/dist/index.js` and by the tool definitions in
+`@cline/core/dist/index.js`.
+
+**System prompt.** Two variants, measured by parsing the constants:
+`DEFAULT_CLINE_SYSTEM_PROMPT` 3,695 chars ≈ **924 tok**, `YOLO_CLINE_SYSTEM_PROMPT` 2,847 chars
+≈ **712 tok** (`@cline/shared/dist/prompt/system.d.ts:1-2`). Plan-mode instructions add 1,759
+chars when active (`prompt/cline.d.ts:14`). Placeholders `{{CLINE_RULES}}` and
+`{{CLINE_METADATA}}` are appended last. The `<env>` block is **inside the system prompt** — four
+lines: platform, date, IDE, cwd — not a per-turn re-injection.
+
+The budget goes almost entirely to two things: parallelism and verification.
+
+> "You can call multiple tools in a single response. Before using tools, identify every
+> independent read, search, command, or edit needed for the next step and emit all of those tool
+> calls now… Do not split independent reads, searches, checks, or edits across separate turns."
+> — `prompt/system.d.ts:1`
+
+> "Always verify the files you have edited or created at the end of the task to ensure they are
+> completed and working as expected." — `prompt/system.d.ts:1`
+
+> "After applying your fix, you must run the relevant test suite to confirm your changes actually
+> resolve the problem. If tests fail, analyze the failures, revise your fix, and re-run until
+> tests pass. Do not consider the task complete until the test suite related to the files you
+> have touched passes." — YOLO variant, `prompt/system.d.ts:2`
+
+The YOLO (background) variant also forces an explicit terminator: *"You should only end the task
+when all the requirements are met by calling the `submit_and_exit` tool."*
+
+**Tool surface.** Core set: `read_files`, `search_codebase`, `run_commands`,
+`fetch_web_content`, `apply_patch`, `editor`, `skills`, `ask_question`, `submit_and_exit`,
+`spawn_agent`, plus ~18 `team_*` multi-agent tools (extracted from
+`@cline/core/dist/index.js`). Core descriptions total ≈4,368 chars ≈ **1,092 tok** (approximate:
+extracted by locating each `name:"x", description:` pair in the minified bundle, so a couple of
+lengths may be mis-attributed). Note the plural names — `read_files`, `run_commands` take
+arrays, which is how the prompt's parallelism doctrine is actually cashed in: batching lives in
+the schema, not only in the prose.
+
+**Context management.** Compaction ratios observed in `@cline/core/dist/index.js` as minified
+constants `uk = 0.5` and `cF = 0.7`, combined as
+`modelMaxTokens < maxInputTokens ? floor(maxInputTokens*0.5) : floor(triggerTokens*0.7)`,
+clamped to `min(maxInputTokens, triggerTokens-1)`. A `0.9` factor also appears nearby. The exact
+composition was not fully resolved from the minified source — treat the ratios as observed, not
+as a confirmed policy.
+
+**Turn economics.** Head-and-tail truncation with explicit model-facing guidance, e.g.
+*"truncated (start and end preserved); pipe through grep/head/tail when…"* and
+*"truncated N chars to fit provider request budget"* — i.e. there is a per-request rebuild pass
+that re-truncates to fit, not only a one-time cap at creation.
+
+**Codebase understanding.** `AGENTS.md` (5 references) and `.clinerules` are discovered
+unconditionally; `spec/fairness.md` records the measured leak at +197 tokens and notes there is
+no switch to disable it.
+
+### aider
+
+Installed at `~/.bench-harnesses/aider/venv/lib/python3.12/site-packages/aider`.
+
+**System prompt.** `coders/editblock_prompts.py:8` — the whole `main_system` is under 30 lines:
+
+> "Act as an expert software developer. Always use best practices when coding. Respect and use
+> existing conventions, libraries, etc that are already present in the code base."
+
+then a numbered procedure whose entire content is the edit protocol: ask for files you need,
+explain in a few sentences, emit `*SEARCH/REPLACE` blocks, and
+*"ONLY EVER RETURN CODE IN A *SEARCH/REPLACE BLOCK*!"*. Two example messages follow
+(`editblock_prompts.py:31-55`) — few-shot demonstrations of the format rather than instructions.
+`coders/base_prompts.py` is 2,384 bytes; `coders/editblock_prompts.py` 5,723;
+`prompts.py` 2,354.
+
+**Tool surface: zero.** There are no tool schemas at all. Edits are text the model writes into
+its reply and aider parses. That is the whole explanation of the 561-token floor — not a leaner
+prompt, but the complete absence of a tool surface.
+
+**Context management.** `models.py:346`:
+`self.max_chat_history_tokens = min(max(max_input_tokens / 16, 1024), 8192)` — a hard cap on
+chat history, floor 1,024, ceiling 8,192, defaulting to 1,024 (`models.py:327`). Beyond it,
+history is summarised (`history.py:27` `summarize`, `:33` `summarize_real`, `:98`
+`summarize_all`).
+
+**Codebase understanding.** A repo map exists (`repomap.py`) gated on `use_repo_map`, set
+per-model (`models.py:424` onward). The arena runs aider with `--no-git`, so the map is empty and
+aider starts blind (`spec/fairness.md`, "Known and accepted") — the 561 figure is therefore a
+lower bound that would not hold on a git-backed corpus.
+
+**Failure handling.** No agentic verification loop: aider proposes edits and the user (or a
+`--auto-test` command) drives validation. It is a different point on the curve — cheapest floor,
+most turns, least autonomy.
+
+---
+
+## 7. Comparison
+
+### System prompt and fixed floor
+
+| | ours | DeepSeek DSH | Gemini CLI | Codex CLI | opencode | cline | aider |
+|---|---|---|---|---|---|---|---|
+| prompt tokens | ~2.8k assembled | ~1.1k static sections | ~6-7.5k | 3.2-5.4k per model | 1.9-3.9k (9 variants) | ~0.9k | ~1.3k |
+| tool schema tokens | **~60** | ~24 tools, 81 KB catalogue | ~8k | ~2.4k | **~11k** | ~1.1k core | **0** |
+| measured wire floor (blocked, see caveat) | **4,186** | not measured | not measured | not measured | 6,172 | 5,282 | 561 |
+| budget spent on | REPL contract + delegation doctrine | per-tool one-liners | doctrine, validation, economics lecture | behaviour, output shape, destructiveness | tone + tool descriptions | parallelism + verification | edit format |
+| deliberately omits | style, tone, verification, workflow | persona, tone, style, safety prose | tool mechanics | tool mechanics | — | — | everything |
+
+### Tools
+
+| | philosophy | count |
+|---|---|---|
+| ours | one general code-execution tool | **1** |
+| DSH | narrow tools + bash; opt-in `code` mode filtering to `run_code` with a generated typed SDK | ~24 of 48 |
+| Gemini | many narrow | ~25-30 |
+| Codex | one shell + one freeform patch tool, dynamic exposure with BM25 `tool_search` | ~24 max, gated |
+| opencode | many narrow, very verbose descriptions | ~19 |
+| cline | narrow tools, native function calling, **array-valued** so one call batches many reads/commands | ~10 core + ~18 `team_*` |
+| aider | none — the model emits SEARCH/REPLACE blocks | 0 |
+
+### Context management
+
+| | trigger | keeps | continuous eviction between compactions |
+|---|---|---|---|
+| ours | `window − 16,384` (~92%) | 20,000 tok tail | **none** |
+| DSH | 80% | 16% tail | spill @50 KB → file; prune @8,192 chars → head 4k + tail 1k |
+| Gemini | 50% | 30% tail | pre-compaction tool-output eviction, 50k-token budget, spill to disk |
+| Codex | server-side | unknown | per-call 10,000-token output cap |
+| opencode | `input_limit − min(20k, maxOut)` | `min(15k, max(2k, 25%))` | prune @40k chars → `[Old tool result content cleared]` |
+| cline | ratios `0.5`/`0.7` observed, composition unresolved | — | per-request rebuild that re-truncates to fit |
+| aider | history capped at `min(max(maxInput/16, 1024), 8192)` | — | none |
+
+Only two harnesses put the summarisation request *in cache-prefix position*: DSH explicitly
+(`compaction-basic/src/summarizer.ts:25-30`) and Codex by doing it server-side. Ours does the
+opposite (`compaction/compaction.ts:574-598`).
+
+### Codebase understanding
+
+| | eager | lazy |
+|---|---|---|
+| ours | `AGENTS.md`/`CLAUDE.md` | everything else |
+| DSH | AGENTS.md (64 KB budget) | ripgrep grep/glob, read-on-demand |
+| Gemini | dir tree (200 items) + GEMINI.md + platform/date | grep-first |
+| Codex | AGENTS.md + env XML | grep via shell only |
+| opencode | AGENTS.md + `<env>` | grep-first, LSP on demand |
+| cline | `<env>` (4 lines, inside the system prompt) + AGENTS.md/.clinerules | `search_codebase`, `read_files` |
+| aider | repo map (git-backed only) | — |
+
+Nobody studied builds a semantic index. The spread is entirely in how much of the workspace is
+described eagerly.
+
+### Turn economics
+
+Every harness re-sends the full conversation each turn. The difference is what is allowed into
+it and what is allowed to stay:
+
+- **Bounded at creation:** DSH (spill 50 KB), Gemini (40k chars), Codex (10k tokens), opencode
+  (2,000 lines / 50 KB), cline (head+tail, re-truncated per request to fit the budget).
+- **Bounded afterwards:** DSH pruner, Gemini pre-compaction eviction, opencode pruning pass.
+- **Unbounded:** ours (`bun-repl/index.ts:339`).
+
+### Failure handling
+
+| | retries | loop guard | verification |
+|---|---|---|---|
+| ours | 3, backoff 2s (`settings-manager.ts:39`) | **none** | quality gates, **default off** (`autonomous.ts:57`) |
+| DSH | 2, honours `Retry-After` | repeat-tool reminder @[3,5,8] | goal driver demands evidence |
+| Gemini | 10, 5-30 s | 3-strikes rule in prompt | mandatory build/lint/typecheck + tests |
+| Codex | transport-level recovery, SSE resume | — | "validate in proportion to risk"; 3 formatting iterations |
+| opencode | 429/5xx predicate | hard step ceiling | — |
+
+---
+
+## 8. Adversarial read of our design
+
+### Where the single-REPL bet wins, with evidence
+
+1. **Tool schema cost is ~60 tokens** (`bun-repl/tool.ts:10`) against opencode's ~11k
+   (`oc.txt:111506` and the per-tool char counts) and Gemini's ~8k (`chunk:281737-282306`).
+   opencode's `bash` description alone is 3,940 chars — half of our entire base prompt. This is
+   the single reason we sit at 4,186 while opencode sits at 6,172 despite our much longer prose.
+2. **Composition inside one turn.** Search → filter → slice → act is one cell. A narrow-tool
+   harness pays a round trip per step. The competitors claw this back with parallelism (DSH
+   `DEFAULT_MAX_PARALLEL_TOOL_CALLS = 10`, `agent-loop/src/constants.ts:6`; Codex
+   `multi_tool_use.parallel`) — which is a partial substitute, not an equal one.
+3. **State that outlives the context window.** `KERNEL_PERSIST_SUMMARY_NOTE`
+   (`compaction/compaction.ts:498`) tells the model its variables survived compaction. No other
+   harness studied has any memory that survives its own summarisation. This is a genuine and
+   under-exploited advantage.
+4. **Delegation is a function call**, not a tool schema (`rlm.ts:132`).
+
+### Where it loses
+
+1. **No truncation contract — the big one.** Narrow tools own their output shape, so every
+   competitor bounds output at the tool boundary. A single `code` tool cannot know what its
+   output means, so ours bounds nothing: `bun-repl/index.ts:339` accumulates without a cap and
+   `bun-repl/tool.ts:85-93` forwards it whole. `tools/truncate.ts` exists and is dead code with
+   respect to the only registered tool. One careless `console.log` permanently inflates every
+   subsequent turn.
+2. **Policy has nowhere to hook.** DSH enforces read-before-edit with an event gate
+   (`packages/fs/fs-observation-policy/src/index.ts`), opencode attaches LSP diagnostics to edit
+   results (`oc.txt:112115`), Codex constrains destructive git commands in prompt *and* in the
+   patch tool's grammar. All of those are tool-boundary hooks. With one general tool every
+   policy must become prompt prose (weak) or REPL-level interception (work not done, except for
+   `edit`).
+3. **Trivial lookups cost authored code.** "read lines 40-80 of X" is a JSON argument elsewhere;
+   here it is a program, with output tokens and a syntax-failure mode. The REPL also rewrites
+   top-level declarations into globals (`bun-repl/transform.ts:1-14`) — necessary for
+   persistence, but a real divergence from plain JS semantics that the model must not trip over.
+4. **Discoverability costs a turn.** A narrow tool advertises its arguments in its schema. Our
+   skills advertise a name and a sentence, then require reading `SKILL.md`
+   (`rlm.ts:104`) — an extra round trip per new skill. DSH's code mode solves exactly this by
+   rendering the tools as a *typed SDK* into the prompt (`packages/core/tools/src/index.ts:875-892`).
+   We pay the single-tool discount and then pay it back in turns.
+5. **Auditability.** "Run this arbitrary JS" is harder to approve than `edit(path, old, new)`.
+   `spec/fairness.md` already records upstream prime-agent as executing model-authored code
+   unsandboxed with no approval gate.
+6. **The strongest current performer hedged.** DeepSeek implemented this design and shipped it
+   as an opt-in mode with `native` as the default (`cordis.patch.yml:424`,
+   `packages/core/tools/src/index.ts:996-1000`). That is not proof the bet is wrong, but it is
+   evidence that the people with the most eval signal did not make it the default.
+
+**Net:** the win is real and quantified. We are currently taking all of the costs and none of
+the available mitigations, and the mitigations are cheap — bound output at the REPL boundary,
+preload file primitives as bindings, and index skill APIs instead of describing them.
+
+### What we simply lack
+
+- **Any bound on tool output.** All six others have one. This is the biggest gap.
+- **Any cheap eviction between compactions.** DSH pruner, Gemini pre-compaction eviction,
+  opencode `[Old tool result content cleared]`, cline's per-request re-truncation. We go from
+  "keep everything" straight to "summarise everything" at ~92% of the window.
+- **Batching.** cline's `read_files` / `run_commands` take arrays and the prompt spends real
+  budget insisting on it; DSH allows 10 parallel calls; Codex has `multi_tool_use.parallel`. Our
+  single tool can express batching inside a cell, but nothing in the prompt tells the model to
+  gather independent reads into one cell rather than one per turn — a free win we do not take.
+- **Cache-stable prompt discipline for dynamic state.** DSH's supersede-shaped runtime-context
+  snapshot (`runtime-context.ts:64-78`), Codex's supersede-shaped AGENTS.md re-injection. We
+  mutate the system prompt mid-session instead (`agent-session.ts:2927`, `:7995`).
+- **A no-progress guard.** DSH's repeat-tool reminder, Gemini's 3-strikes rule, opencode's step
+  ceiling. We have none.
+- **Verification doctrine.** Gemini: *"Validation is the only path to finality."* DSH's goal
+  driver demands evidence before completion. We have the machinery (`autonomous.ts`) with the
+  commands list empty by default.
+- **Self-critique of the compaction summary.** Gemini's second pass (`chunk:334255`).
+- **Editor feedback on edits.** opencode returns `<diagnostics>` with every edit result.
+- A repo map. Deliberate, and shared with DSH and Codex — not a gap.
+
+---
+
+## 9. Recommendations, ranked by impact ÷ effort
+
+Every item is a deletion or a rewiring of something that already exists, except R4 and R6.
+The numbering is the rank.
+
+| # | change | effort | tokens-to-goal | time-to-goal |
+|---|---|---|---|---|
+| R1 | gate the continual-harness block on having entries | trivial | **−677/turn** on fresh sessions | small TTFT win |
+| R2 | truncate + spill REPL output | small (code exists) | removes unbounded tail | large on bad turns |
+| R3 | stop mutating the system prompt mid-session | medium | neutral count, large cost | large (cache reads) |
+| R4 | preload `read`/`grep`/`glob`/`ls` REPL bindings | medium | fewer output tokens/turn | fewer turns to first edit |
+| R5 | make the summariser call a cache prefix | small | −(whole conversation) per compaction | faster compaction |
+| R6 | repeat-call guard (prompt sentence first) | trivial | large on failing runs | large on failing runs |
+| R7 | trim the skills catalogue to an index | trivial | −400-600/turn | — |
+| R8 | fix `skills/edit/SKILL.md` | trivial | small | removes a failure mode |
+| R9 | compact at ~80% instead of ~92% | trivial (config) | neutral | avoids overflow churn |
+| R10 | gate delegation doctrine on depth budget | trivial (209 tok) / risky (467 tok) | −209 safe, −467 unsafe | — |
+| R11 | one verification sentence in appended guidance | trivial | +~30/turn, −rework | fewer wrong finishes |
+| R12 | one batching sentence in appended guidance | trivial | −turns × floor | fewer round trips |
+
+Ship first: R1, R2, R8 — all trivial, none behavioural. Then R6 + R11 + R12 as a single
+three-sentence prompt diff; a turn saved is worth more than any per-turn trim on this list, so
+these punch above their rank. R3 and R5 are the money changes and need a measured A/B. R4 is the
+one that makes the single-tool bet actually pay.
+
+---
+
+### R1 — gate the continual-harness block on having entries
+
+**What.** `formatHarnessStateForPrompt` (`src/core/refinement/refinement.ts:403`) emits **2,707
+chars ≈ 677 tokens with zero entries** — 16% of our measured 4,186 floor spent describing an
+empty store. It is passed unconditionally (`agent-session.ts:4339`).
+
+**Mechanism.** Return `""` when `totalEntries === 0`. Separately, delete the duplicated call
+contract: `refinement.ts:432` restates at length what `rlm.ts:43` already says (skills are
+preloaded bindings, read SKILL.md, `rlm()` returns at admission, no invented wrappers). Keep one
+copy.
+
+**Effect.** −677 tok on every turn of a fresh session; roughly −300 on sessions with entries.
+At 30 turns that is ~20k tokens of pure floor.
+
+**Risk.** Near zero — the model loses a description of something that does not exist. The only
+care needed: when the first entry is created mid-session the block appears, which changes the
+prompt — so do R3 first or the two fixes fight each other.
+
+**Measured.** One-word-answer probe, comparing `contextTokens` at `seq=0` — not `promptTokens`,
+for the reasons in `docs/fixed-context-open-question.md`. Our own harness is measured against
+itself here, so the cross-shape problem does not apply, but the cache-read problem does: use the
+`uncachedInput + cacheRead + cacheWrite` sum.
+
+### R2 — truncate and spill REPL output
+
+**What.** `ipython` results are unbounded (`bun-repl/index.ts:339`, `bun-repl/tool.ts:85-93`).
+
+**Mechanism.** Reuse `src/core/tools/truncate.ts` — already written, already tested, currently
+reachable only from the unregistered `bash` tool. Apply DSH's two-stage shape at
+`bun-repl/tool.ts:85`: over ~8k chars keep head 4k + tail 1k with an explicit marker
+(`compaction-tool-result-pruner/src/config.ts:7-13`); over 50 KB write the full text to a file
+under the session dir and replace it with head/tail plus the retrieval hint DSH uses verbatim —
+*"Full formatted result stored at: `<path>`. Use read with offset/limit, or grep this path to
+search within it."* (`spill-policy/src/index.ts:107`). Truncate head **and** tail so a stack
+trace keeps both its exception line and its innermost frames.
+
+**Effect.** Caps the worst-case turn. Today the failure is silent and permanent: the oversized
+result is re-sent on every subsequent turn until compaction.
+
+**Risk.** Truncating something needed → the model re-reads. The spill file makes that recoverable
+rather than lossy, which is why the spill half is not optional. Do not truncate `isError`
+results below the point where the error message survives.
+
+**Measured.** `toolResultShare`, `contextGrowthPerTurn`, `peakContext` on a task that reads a
+large file.
+
+### R3 — stop mutating the system prompt mid-session
+
+**What.** Any harness-state write rebuilds the system prompt and reassigns
+`agent.state.systemPrompt` (`agent-session.ts:2927` for kernel-side CRUD, `:7995` for `/refine`).
+Prompt caching puts `cache_control` on the system prompt (`packages/ai/src/types.ts:311`), so one
+`refine.run()` invalidates the cached prefix for the remainder of the session. Cache reads cost
+~10% of fresh input (`packages/ai/src/cache-pricing.ts:10`), and `spec/metrics.md` notes this is
+often where the cost difference between harnesses actually lives.
+
+**Mechanism.** Copy DSH exactly. Remove `harnessState` from `buildSystemPrompt`
+(`system-prompt.ts:105`, `:138`). Render it instead as a trailing user-role snapshot, re-emitted
+only when its text changes — `packages/core/agent-loop/src/runtime-context.ts:64-78` returns
+`undefined` when the rendered text equals the retained one — headed with the supersede line
+(`packages/core/system-prompt/src/index.ts:239`):
+
+> "Current runtime context. This snapshot supersedes earlier runtime-context snapshots."
+
+Then delete the two rebuild call sites.
+
+**Effect.** No change in token count; a large change in what those tokens cost and in TTFT.
+On a 30-turn session with one refinement at turn 10, ~20 turns stop paying full rate on the
+whole prefix.
+
+**Risk.** Medium. State moves from a high-salience position (system prompt) to a lower one
+(mid-conversation), so instruction-following on harness entries may weaken — this must be A/B'd
+on solve rate, not assumed. Ordering also matters: the snapshot must land before the model acts
+on it.
+
+**Measured.** `cacheHitRate` and `billedInputTokens` (the decomposition proposed in
+`docs/fixed-context-open-question.md`), plus `costDrift` (`spec/metrics.md`), on a task scripted
+to force one refinement mid-session; solve rate as the guard. This is the recommendation the new
+decomposition was built to make visible — `contextTokens` will not move at all.
+
+### R4 — preload file primitives as REPL bindings
+
+**What.** The injected global set (`bun-repl/repl-script.ts:185-210`) has `cd`, `pwd`, `env`,
+`display`, `rlm` — and no `read`, `grep`, `glob`, or `ls`. Every file lookup is a program the
+model must author.
+
+**Mechanism.** Add four bindings next to `cd`/`pwd` in the same injection path
+(`repl-script.ts:589-615`): `read(path, {offset, limit})`, `grep(pattern, {glob, path})` backed
+by ripgrep, `glob(pattern)`, `ls(dir)` — each returning already-truncated results using the
+limits from R2 and the constants everyone else converged on (2,000 lines, 2,000 chars per line,
+50 KB; grep 250 matches; glob 100 results — DSH `tool-fs/src/read.ts:16`,
+`tool-fs-search/src/{grep,glob}.ts`; Gemini `chunk:253578-253580`; opencode `maxLines=2000`,
+`maxBytes=51200`). Advertise them by name only, in the existing runtime-label line
+(`rlm.ts:3`) — not with per-tool prose. Prompt cost ≈ 20 tokens.
+
+**Effect.** Cuts output tokens per exploration turn, removes a class of failed cells, and gives
+truncation a place to live at the point of creation instead of after the fact. This is the
+mitigation that makes the single-tool bet actually pay.
+
+**Risk.** Scope creep — four names, one line, no prose. If it grows into a documented tool
+catalogue we have rebuilt opencode's 11k-token surface inside our prompt.
+
+**Measured.** `outputTokens` per turn, `toolCalls`, `firstEditMs`, cell error rate
+(`isError` share of REPL results).
+
+### R5 — make the summariser call a cache prefix
+
+**What.** `summarizeMessages` (`compaction/compaction.ts:565-600`) serialises the entire
+conversation into a single user message under a *different* system prompt
+(`SUMMARIZATION_SYSTEM_PROMPT`, `compaction/utils.ts:162`). Zero cache reuse: one compaction of a
+150k-token conversation costs ~150k full-rate input tokens.
+
+**Mechanism.** DSH's comment states the design and the reason
+(`compaction-basic/src/summarizer.ts:25-30`): keep the session's own system prompt, tools and
+message prefix in front, and deliver the summarisation directive as the **final user message**,
+so the auxiliary call is a genuine prefix of the last routed request. Carry over their guards
+against the model continuing the conversation — *"Output only the checkpoint text: do not call
+any tool or take any other action."* Also adopt their prior-summary rule: *"If the conversation
+already contains a `<compacted-summary>` block, it is a PRIOR checkpoint. Do not copy it forward
+verbatim."*
+
+**Effect.** Turns a full-price re-read into a cache hit at every compaction.
+
+**Risk.** The model may try to continue the conversation instead of summarising — which is
+exactly what our current serialise-to-text approach was built to prevent
+(`compaction/utils.ts:96`, "prevents the model from treating it as a conversation to continue").
+DSH solves it with wording, not with re-serialisation. Verify the summary quality before/after,
+and keep the current path as fallback.
+
+**Measured.** `costUsd` on the compaction turn, and summary quality via solve rate after
+compaction (`spec/metrics.md` records whether a run survives its compactions).
+
+### R6 — repeat-call guard
+
+**What.** No detection of repeated identical tool calls anywhere in `src/core`.
+
+**Mechanism.** Cheapest version first: one sentence in the appended guidance, modelled on
+Gemini's rule (`chunk:331990`) — after three failed attempts at the same fix, change approach
+rather than continue patching. If measurement shows loops persisting, add DSH's harness-side
+guard: thresholds `[3,5,8]` on identical consecutive calls, keyed on the normalised cell source,
+injecting *"The repeated calls are not making progress. Do not call this tool with these exact
+arguments again."* (`repeat-tool-reminder/src/index.ts:71-79`).
+
+**Effect.** Loops dominate `goodput` on failed tasks — tokens spent with the grader signal flat.
+
+**Risk.** False positives on legitimately repeated commands (re-running a test after an edit).
+Trigger only on *identical consecutive* calls, which an intervening edit breaks.
+
+**Measured.** `redundantToolCalls` (`spec/metrics.md`), and `goodput` on tasks the harness fails.
+
+### R7 — trim the skills catalogue to an index
+
+**What.** `formatSkillsForPrompt` (`skills.ts:436-466`) emits name, type, binding, full
+description and absolute location per skill — ~2.9 KB of descriptions plus ~1.4 KB of XML for the
+12 shipped skills, ≈1,075 tokens if all are visible.
+
+**Mechanism.** For JS skills the binding name is the address; drop `<type>` and `<location>`
+(derivable, and the prompt already explains how to resolve skill-relative paths at
+`skills.ts:447`). Cap each description at ~120 chars. `prime-intellect`'s description alone is
+499 chars.
+
+**Effect.** −400 to −600 tokens per turn.
+
+**Risk.** Worse skill routing. This is the one recommendation with a real accuracy trade-off, so
+measure solve rate on tasks that require a specific skill, not just the floor.
+
+**Measured.** Fixed-floor probe plus solve rate on skill-dependent tasks.
+
+### R8 — fix `skills/edit/SKILL.md`
+
+**What.** It documents Python keyword arguments — `await edit(path="pkg/file.py", old_str=old,
+new_str=new)` — and an IPython-style shell entry point `!edit --path ... --old-str ...`. The
+actual binding is positional JS: `run(path, oldStr, newStr)` (`skills/edit/skill.js:31`). The
+system prompt documents the correct form (`rlm.ts:111`) and `refinement.ts:432` explicitly states
+that *"Skills ship no CLI entry points, so never invoke them as shell commands."* The SKILL.md
+contradicts both.
+
+**Effect.** Removes wasted turns whenever the model follows the skill's own documentation.
+
+**Risk.** None.
+
+**Measured.** Cell error rate on edit-heavy tasks.
+
+### R9 — compact at ~80% instead of ~92%
+
+**What.** `shouldCompact` fires at `contextTokens > contextWindow − 16,384`
+(`compaction/compaction.ts:229`, `settings-manager.ts:863`) — ~92% of a 200k window. DSH uses
+80% (`compaction-basic/src/config.ts:20`), Gemini 50% (`chunk:334048`), opencode a 20k headroom
+subtraction like ours.
+
+**Mechanism.** Config only: raise `reserveTokens`, or switch to a ratio.
+
+**Effect.** Neutral on tokens; avoids the overflow path (`agent-session.ts:8038`), where a
+failed request is followed by compaction and a retry — a whole wasted round trip.
+
+**Risk.** More frequent compaction means more summary-induced loss. Gemini's 50% is aggressive
+because it pairs with a two-pass self-critiqued summary; ours has neither, so 80% is the right
+target, not 50%.
+
+**Measured.** `compactions` count and whether runs still succeed afterwards, plus `retries`.
+
+### R10 — gate delegation doctrine on the depth budget
+
+**What.** Recursion and messaging doctrine costs **467 tokens** inside `buildRlmPrompt`
+(measured by rebuilding the prompt with `allowRecursion: false` and the `agent_*` skills
+removed), plus **209 tokens** in `buildSubagentGuidance` (`rlm.ts:177`) — 676 tokens, ~16% of the
+floor, paid on every task including the ones that never delegate. Codex takes the opposite
+position and forbids sub-agents unless explicitly requested (byte 165,988,879).
+
+**Mechanism.** The 209 is already conditional on `hasIpython` and `allowRecursion`
+(`system-prompt.ts:129`) — extend it to `rlmMaxDepth > 0` and consider depth 0 as the default for
+one-shot tasks.
+
+**Risk.** The 467 sits inside the **trained** prefix — `system-prompt.ts:126` describes
+`buildRlmPrompt` as "the trained `buildRlmPrompt` prefix". Cutting trained text risks
+off-policy degradation that no token count will show. Treat the 209 as safe to gate and the 467
+as an experiment requiring a solve-rate A/B, not a saving to book.
+
+**Measured.** Fixed-floor probe for the token delta; solve rate on delegation-heavy tasks as the
+guard.
+
+### R11 — one verification sentence
+
+**What.** Autonomous quality gates exist and default to no commands (`autonomous.ts:57`,
+`DEFAULT_AUTONOMOUS_GATES.commands = []`). Nothing in the prompt tells the model to verify.
+
+**Mechanism.** One line appended to guidance, not new machinery. Gemini's framing is the
+tersest that works: *"Validation is the only path to finality. Never assume success or settle
+for unverified changes."* (`chunk:331988`). DSH's equivalent lives in the goal driver:
+*"Before claiming completion, gather evidence that the whole objective is achieved."*
+(`goal-round-driver/src/prompt.ts:12-25`).
+
+**Effect.** ~+30 tokens per turn against a reduction in confidently-wrong finishes. This is the
+one place where spending tokens is likely correct.
+
+**Risk.** Over-verification on trivial tasks inflates turns. Measure `turns` alongside solve
+rate.
+
+### R12 — one batching sentence
+
+**What.** Nothing in our prompt tells the model to put independent reads, searches and commands
+into a *single* cell. Every turn costs the full 4,186-token floor plus the whole conversation, so
+a turn saved is worth more than any per-turn trimming on this list.
+
+**Mechanism.** One line, modelled on cline's — which spends a large share of a 924-token prompt
+on exactly this (`@cline/shared/dist/prompt/system.d.ts:1`): *"Before acting, identify every
+independent read, search, or command the next step needs and issue them in one cell. Do not wait
+for one independent result before requesting another."* This is the one place our design should
+beat the many-tools harnesses outright: they need `multi_tool_use.parallel` or array-valued
+schemas to batch, we just need a `Promise.all`.
+
+**Effect.** Directly reduces `turns`, which multiplies against the floor. Cheapest item on this
+list per token spent.
+
+**Risk.** Over-batching wastes work when an early result would have made later reads
+unnecessary. Scope the instruction to *independent* work, as cline does.
+
+**Measured.** `turns`, `actionRate`, and `tokensPerTurn` (`spec/metrics.md`).
+
+---
+
+## Verification notes
+
+Could not verify:
+
+- **DeepSeek's actual eval harness.** DSH ships no benchmark runner; the V3.2 paper
+  (arxiv 2512.02556) states SWE-bench Verified was scored with an internal framework. Whether
+  DSH is that framework is unknown.
+- **Rendered prompt token counts at runtime** for any competitor — all competitor figures are
+  `chars/4` over source or bundle text, not tokenizer output. Our own figures are `chars/4` over
+  actually-rendered prompts, so they are comparable to each other but ~10% high in absolute
+  terms.
+- **Codex numeric defaults** (`project_doc_max_bytes`, `tool_output_token_limit`, compaction
+  percentage) are compiled integer constants, not strings, and were not recoverable from the
+  binary. Its server-side compaction prompt is not public.
+- **opencode's ambient-context path**: two code paths coexist in the binary
+  (`oc.txt:112700` vs `:111228`); which is live was not determined.
+- **Gemini's serialized schema size** was measured over JS source, not over the wire.
+- **cline's compaction policy**: the ratios `0.5` and `0.7` are visible as minified constants in
+  `@cline/core/dist/index.js`, but how they combine with `triggerTokens` was not fully resolved.
+  Its per-tool description sizes were extracted from the minified bundle by pairing
+  `name:"x", description:` and may be mis-attributed by a few hundred chars.
+- **A common claim about cline is wrong** and worth recording: the v3.0.55 CLI uses native
+  function calling with JSON schemas, not the XML pseudo-tool protocol of the VSCode extension.
+  Any comparison that charges cline for an XML tool protocol is measuring the wrong artifact.
+- **Our own token figures** are `chars/4` over rendered prompts, cross-checked against the
+  arena's measured 4,186-token wire floor; individual block figures are not independently
+  wire-verified.
