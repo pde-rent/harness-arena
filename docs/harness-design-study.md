@@ -421,3 +421,82 @@ is prompt-level: gpt-5.2's "Validating your work" (start specific, broaden; iter
 up to 3 times; never fix unrelated bugs), compressed in newer prompts to "verify it in
 proportion to risk". Runtime nudges catch tool misuse: *"patch detected without explicit call
 to apply_patch. Rerun as [\"apply_patch\", \"<patch>\"]"*.
+
+---
+
+## 5. opencode
+
+Read from the installed bundle under `~/.opencode/node_modules`; citations are line numbers in
+the extracted bundle text (`oc.txt:LINE`).
+
+### System prompt
+
+**Nine per-model variants** (`oc.txt:111116`). Sizes: `codex` 7,440 chars ≈1.9k tok (smallest),
+default `Oi` 8,522 ≈2.1k, `muse` 9,304, gemini `Vi` 15,406 ≈3.9k (largest). Sections: Tone and
+style · Proactiveness · Following conventions · Code style · Task Management · Doing tasks ·
+Tool usage policy · Git/GitHub (the gemini variant adds "Core Mandates").
+
+> "You are OpenCode, the best coding agent on the planet." — `oc.txt:110969`
+
+> "THE PROBLEM CAN NOT BE SOLVED WITHOUT EXTENSIVE INTERNET RESEARCH." — `oc.txt:110560`
+
+> "**Always check if you have already read a file, folder, or workspace structure before
+> reading it again.**" — `oc.txt:110648`
+
+> "You are NEVER allowed to stage and commit files automatically." — `oc.txt:110562`
+
+The dedup instruction is worth noting: opencode pushes re-read avoidance onto the *model*,
+where cline enforces it in the harness.
+
+### Tool surface
+
+~19 tools. Canonical set `["bash","read","edit","glob","grep","webfetch","task","todowrite",
+"websearch","lsp","skill"]` (`oc.txt:111506`) plus `write` (`:111552`), `apply_patch`
+(`:111619`), `plan_exit` (`:111241`), `question` (`:111250`), `invalid` (`:111556`) and 3 MCP
+tools (`:111209`). Description sizes in chars: bash **3,940** (templated with OS, shell and an
+entire git section), apply_patch 1,842, task 1,707, write 951, todowrite 540, question 516,
+plan_exit 483, websearch 476, lsp 345, webfetch 316, read 304, skill 197, grep 179, glob 168 —
+**≈11k tokens of tool descriptions**, before parameter schemas. Native JSON schemas via
+`toJsonSchemaDocument` (`oc.txt:111494`).
+
+opencode therefore spends about **five times more on tool definitions than on its system
+prompt**. Its 6,172-token measured floor is mostly tool surface, not prose.
+
+### Context management
+
+Two independent mechanisms:
+
+1. **Continuous pruning.** Walks backward, skips the last 2 user turns, marks completed tool
+   outputs `compacted` once cumulative output exceeds 40,000 chars and pruned exceeds 20,000;
+   `skill` outputs are exempt. Renders as `[Old tool result content cleared]`
+   (`oc.txt:111132`, `:112566`).
+2. **LLM compaction** when context exceeds `model.limit.input − min(20000, maxOutputTokens)` —
+   a hard headroom subtraction, not a ratio. Preserved tail =
+   `preserve_recent_tokens ?? min(15000, max(2000, floor(limit*0.25)))`, turn-aligned
+   (`oc.txt:111132`).
+
+Sub-agents: `task` takes `subagent_type`, is **resumable via `task_id`**, and can run in the
+background (`oc.txt:111478-111494`), with built-in specialist prompts for file search
+(`:111734`) and code review (`:111868`).
+
+### Codebase understanding
+
+`AGENTS.md` injected with *"These instructions replace all previously loaded ambient
+instructions."* (`oc.txt:112700`). Nested `AGENTS.md` files are attached to `read` output inside
+a system-reminder block (`:111474`). LSP diagnostics are **not** in the system prompt — they are
+appended to `edit`/`write`/`patch` results as `<diagnostics file="...">` (`:112115`), plus a
+standalone `lsp` tool (`:111561`). *Unresolved:* two ambient-context code paths coexist in the
+binary (`oc.txt:112700` vs an `Instruction` service at `:111228` that also globs
+`~/.claude/CLAUDE.md` and `CONTEXT.md`); which is live was not determined.
+
+### Turn economics
+
+Caps `maxLines = 2000`, `maxBytes = 51200`, user-overridable via `tool_output.max_lines /
+max_bytes`; bash buffers `maxBytes*2` and spills to a file kept 7 days. webfetch 5 MB / 30 s /
+120 s (`oc.txt:111545`). Tool outputs are re-sent verbatim every turn until pruned or compacted.
+
+### Failure handling
+
+Retryable predicate `/429|500|502|503|504|524/` plus rate-limit and overloaded regexes
+(`oc.txt:111125`). Hard step ceiling emitting *"CRITICAL - MAXIMUM STEPS REACHED … Tools are
+disabled until next user input"* (`:112688`).
