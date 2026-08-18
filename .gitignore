@@ -1,0 +1,9 @@
+node_modules/
+dist/
+results/**/work/
+results/**/logs/
+*.log
+.DS_Store
+# never commit credentials or raw metering that may embed prompts
+.env
+*.local.json
