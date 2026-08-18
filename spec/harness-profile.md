@@ -3,6 +3,10 @@
 Static and resource facts about each harness, recorded once per version and carried into every
 result file and every view.
 
+Host-state leakage is part of this profile and is reported at the **top level** of every
+comparison, not in a footnote: it changes cost, behaviour, reproducibility and privacy on a
+real machine, and no harness discloses it.
+
 **This never enters the run score.** A harness does not win for being a small binary. The
 profile exists to explain *why* two harnesses diverge while running identical model weights —
 without it, every difference looks like magic.
@@ -59,7 +63,7 @@ while building this rig, and each silently corrupts results if unchecked.
 
 | field | meaning | already observed |
 |---|---|---|
-| `readsHostState` | reads config/skills/rules from the user's home that the task never asked for | opencode (`~/.claude/skills`, `~/.agents/skills`, a plugin), pi (`~/.agents/skills`), cline (workspace rules, unconditional) |
+| `readsHostState` | reads config/skills/rules from the user's home that the task never asked for. Recorded as paths, with `unsuppressable`, `replacesSystemPrompt`, `acquiresToolsFromHost`, `crossVendorReads` and the measured native-vs-clean token delta — see `docs/host-state-leaks.md` | every harness but cursor and aider; one silently replaced its own system prompt with a user-defined agent |
 | `hiddenBilledCalls` | extra model calls beyond the task — session titling, summarising, model routing | opencode, hermes, gemini-cli (a "complexity score" router) |
 | `honestExitCode` | non-zero when the run actually failed | hermes exits 0 after its model call fails outright |
 | `usageSelfReportAccurate` | its own token/cost numbers match the wire | Claude Code reports cost at a different vendor's prices than the route used |
