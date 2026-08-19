@@ -30,10 +30,12 @@ itself.
 | `opencode` | 1.18.18 |
 | `codex` | 0.147.0 |
 | `hermes` | git @ `~/.hermes/hermes-agent` |
+| `terminus-2` | terminal-bench 0.2.18 |
 | `aider` | pending |
 | `cline` | pending |
-| `cursor` | not runnable unattended |
-| `gemini-cli` | pending |
+| `cursor` | 2026.08.11-e8db854 (`agent-cli-local` build) |
+| `qwen-code` | 0.21.14 (fork of Gemini CLI) |
+| `gemini-cli` | not pinnable — no OpenAI-compatible mode |
 
 Names are the registry ids from `runner/harnesses.json` — the same strings `--harnesses` takes.
 

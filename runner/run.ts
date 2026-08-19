@@ -136,8 +136,16 @@ async function startProxy(runId: string, harness: string, logPath: string) {
 	throw new Error(`proxy did not report a port; output so far: ${buffered.slice(0, 400)}`);
 }
 
-/** Wait until no new metering rows for this run have appeared for `quietMs`. */
-async function settleUsageLog(logPath: string, runId: string, quietMs = 4000, maxMs = 40_000): Promise<void> {
+/**
+ * Wait until no new metering rows for this run have appeared for `quietMs`.
+ *
+ * An empty log is NOT quiet, it is "nothing has landed yet": the responses shape writes its row
+ * only after the provider lookup finishes, which backs off to ~31 s past the end of the stream.
+ * Returning on zero rows killed the proxy at ~4.5 s and threw the row away, so codex read as
+ * zero metered requests on runs that had in fact gone through the proxy correctly. Waiting the
+ * full `maxMs` in that case costs time only on runs that are already broken.
+ */
+async function settleUsageLog(logPath: string, runId: string, quietMs = 4000, maxMs = 60_000): Promise<void> {
 	const deadline = Date.now() + maxMs;
 	let lastCount = -1;
 	let lastChange = Date.now();
@@ -146,7 +154,7 @@ async function settleUsageLog(logPath: string, runId: string, quietMs = 4000, ma
 		if (count !== lastCount) {
 			lastCount = count;
 			lastChange = Date.now();
-		} else if (Date.now() - lastChange >= quietMs) {
+		} else if (count > 0 && Date.now() - lastChange >= quietMs) {
 			return;
 		}
 		await new Promise((resolve) => setTimeout(resolve, 500));

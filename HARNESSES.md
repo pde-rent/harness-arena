@@ -642,7 +642,32 @@ usage:{inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens}}`.
   segment (189 → 1 241); it is injected once into the user-message chain, not the system
   prompt.
 
-### ⚠ Blocker (ours, not Cursor's) — registry entry is `"enabled": false`
+### ✔ Blocker cleared (2026-08-20) — registry entry is `"enabled": true`
+
+The blocker below was ours, not Cursor's, and it is fixed: `proxy/server.ts` now answers
+`GET /models` itself with a single-entry catalogue containing only the pinned model, so
+Cursor can no longer ingest OpenRouter's list and the race it caused is gone.
+
+Verified containerized against the live proxy, `smoke-ok`:
+
+```
+{"runId":"cursor__smoke-ok__1","solved":true,"outcome":"solved","exitCode":0,"requests":1,
+ "promptTokens":15395,"completionTokens":3,"totalTokens":15398,
+ "providersServed":["DeepInfra"],"costUsd":0.00123214,"wallMs":9022}
+```
+
+Proxy rows for that run: `/models 200 note=models_catalogue_served_by_shim`, then one
+`/chat/completions 200 providerServed=DeepInfra promptTokens=15395`. Repeated runs give
+**15,395 every time** — no more 14,381/19,509 swing. 15,395 = the documented catalogue-free
+14,381 plus the ~1,050 the baseline `AGENTS.md` costs, which is the expected total.
+
+One flake seen, not Cursor's: the runner's account-spend backstop can bill a previous run's
+cost to the next attempt when OpenRouter's credits endpoint lags, discarding an attempt as
+`$0.001232 of spend never reached the meter` while its own proxy rows are clean.
+
+The original finding, kept for the record:
+
+
 
 `cursor-agent-local` unconditionally does `GET {base}/models` at startup and splices
 **every returned slug** into the `Task` tool description ("… you may ONLY use model slugs
@@ -660,6 +685,9 @@ schema and the run still succeeds.
 of forwarding it. That kills the contamination and the race at once, and is the correct
 control anyway — a harness should not be able to see models other than the pinned one.
 Then flip `enabled` to `true`; nothing else in the entry needs to change.
+
+**Done.** The proxy serves the catalogue (`server.ts`, `models_catalogue_served_by_shim`) and
+the entry is enabled unchanged apart from `enabled`.
 
 ### Measured
 
@@ -687,3 +715,87 @@ no key inside.
 build a real subscriber runs. Same version, system prompt, tools and schemas — only the
 inference transport differs — but it is not literally the shipped product and must be
 stated wherever Cursor's numbers are published.
+
+---
+
+## 9. Gemini CLI (`@google/gemini-cli`) — NOT pinnable, stays `"enabled": false`
+
+Installed 0.55.1 into an isolated prefix (`bun add @google/gemini-cli@0.55.1`). It is
+trivially **divertible** and completely **unpinnable**, which are not the same thing.
+
+Re-verified 2026-08-20 straight off the installed bundle
+(`node_modules/@google/gemini-cli/bundle/*.js`):
+
+| probe | result |
+|---|---|
+| `grep -o 'OPENAI_[A-Z_]*'` | **0 hits** |
+| auth-type literals | `"oauth-personal"` 28, `"gemini-api-key"` 35, `"vertex-ai"` 28, `"cloud-shell"` 6 |
+| base-URL overrides | `GOOGLE_GEMINI_BASE_URL` 40, `GOOGLE_VERTEX_BASE_URL` 28, `CODE_ASSIST_ENDPOINT` 24 |
+
+All three overrides redirect the *destination* while keeping the Google
+GenerativeLanguage *shape*: model in the URL path
+(`POST {base}/v1beta/models/{model}:streamGenerateContent?alt=sse`), `x-goog-api-key` auth,
+a `{contents, systemInstruction, tools:[{functionDeclarations}], generationConfig}` body,
+and SSE of `GenerateContentResponse` with `usageMetadata`.
+
+`proxy/server.ts` implements `openai`, `anthropic` and `responses`. It does **not** implement
+that shape, and its pin gate correctly refuses the path rather than proxying it unpinned —
+so enabling this entry would produce runs with no model force, no provider pin and no
+metering. An unpinnable harness is worse than a missing one, so it stays out.
+
+Two ways back in, neither taken here: teach the proxy the Gemini shape (URL rewrite for the
+model, `x-goog-api-key`, `provider.only` injection, `usageMetadata` accounting), or wait for
+upstream to ship OpenAI-compatible endpoints (feature request still open, not shipped).
+
+## 10. Qwen Code (`@qwen-code/qwen-code`) — the pinnable Gemini CLI fork
+
+```bash
+mkdir -p ~/.bench-harnesses/qwen-code && cd $_
+printf '{"name":"qwen-code-prefix","private":true}' > package.json
+bun add @qwen-code/qwen-code@0.21.14
+./node_modules/.bin/qwen --version      # 0.21.14
+```
+
+Registered as its own id `qwen-code`, **never** as a stand-in for `gemini-cli`: it ships its
+own system prompt ("You are Qwen Code … developed by Alibaba Group"), its own 63-tool surface
+and its own skills catalogue. Same lineage, different product.
+
+**Wiring is env-only** — no config file is needed for routing:
+
+```bash
+OPENAI_BASE_URL={{BASE_URL}}   OPENAI_API_KEY=bench-dummy   OPENAI_MODEL=$BENCH_MODEL
+qwen -p "PROMPT" -o json --approval-mode yolo -m "$BENCH_MODEL"
+```
+
+Verified against a logging sink: plain streamed `POST {base}/chat/completions`,
+`authorization: Bearer <key>`, model verbatim. `QWEN_CODE_SUPPRESS_YOLO_WARNING=1` is
+required — the yolo banner otherwise prints to stdout and corrupts the JSON.
+
+- **Second billed call — found and disabled.** A stock run fires **two**
+  `/chat/completions`. The second is the *managed memory extraction subagent* (captured
+  body: 4 messages, 7 tools, 9,362 promptTokens / 94 completion). Defaults are
+  `enableManagedAutoMemory: true`, `enableManagedAutoDream: true`, so the per-run
+  `.qwen/settings.json` sets `memory.enableManagedAutoMemory`, `.enableManagedAutoDream`,
+  `.enableAutoSkill`, `.enableTeamMemory`, `.enableTeamMemorySync` all `false`. With them
+  off: exactly **one** metered request, and the main turn shrinks 32,538 → 31,475
+  promptTokens because the memory tooling was in the main prompt too.
+- **Exit code honest, `is_error` is not.** Exit 0 on success, non-zero on failure; but a
+  failed model call lands as `"result": "[API Error: 500 …]"` with `"is_error": false`.
+  Trust the exit code and the meter, not that field.
+- **Isolation:** `HOME` + `QWEN_CODE_HOME` redirected into the workdir, so `~/.qwen`
+  (settings, memories, skills, extensions, MCP, sessions) is unreachable.
+- **Instruction file — delivery proven.** Context-file list is
+  `[QWEN.md, AGENTS.md, QWEN.local.md]`, so only `AGENTS.md` is planted (planting `QWEN.md`
+  too would deliver the same briefing twice). Containerized: **31,580 → 32,427**
+  promptTokens (+847), and the proxy's own `contextTokens` **30,427 → 31,274** (+847 exactly).
+
+Verified containerized against the live proxy, `smoke-ok`:
+
+```
+{"runId":"qwen-code__smoke-ok__1","solved":true,"outcome":"solved","exitCode":0,"requests":1,
+ "promptTokens":32427,"completionTokens":3,"totalTokens":32430,
+ "providersServed":["DeepInfra"],"costUsd":0.002398092,"wallMs":7634}
+```
+
+32,427 is the **largest fixed context in the registry** — 63 tools plus a skills catalogue
+injected as a `<system-reminder>` in the first user message.

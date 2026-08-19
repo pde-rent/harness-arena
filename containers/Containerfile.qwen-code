@@ -1,0 +1,37 @@
+# Qwen Code CLI harness image for the coding-agent benchmark.
+#
+# Build (empty context, everything is downloaded):
+#   podman build -t bench/qwen-code:pinned -f containers/Containerfile.qwen-code containers
+#
+# CLI path (runner invokes this exact path): /opt/harness/bin/qwen
+# Pinned CLI version: 0.21.14  (npm @qwen-code/qwen-code@0.21.14)
+#
+# WHY THIS AND NOT @google/gemini-cli
+#
+# Qwen Code is a fork of Google's Gemini CLI, and it is the only maintained fork of it that
+# speaks a shape this rig can pin: OPENAI_BASE_URL + OPENAI_API_KEY + OPENAI_MODEL drive plain
+# `POST {base}/chat/completions` with `authorization: Bearer <key>`. Upstream @google/gemini-cli
+# has no OpenAI-compatible mode at all (0.55.1: four Google auth types, zero OPENAI_* identifiers
+# in the bundle), so it cannot be metered here and stays disabled. This is a DIFFERENT PRODUCT
+# from Gemini CLI -- own system prompt, own tool surface -- and must be reported as Qwen Code,
+# never as a stand-in for Gemini CLI.
+
+# Shared base: node:22-slim pinned by digest, plus git/ripgrep/ca-certificates and an empty HOME.
+# See Containerfile.base for why the harnesses share a base but not an image.
+FROM localhost/bench/base:pinned
+
+# Install the pinned CLI into an isolated prefix. --ignore-scripts keeps the package's
+# postinstall (which bun also blocks on the host) from running; the CLI is a prebuilt bundle
+# and does not need it.
+RUN npm install -g --prefix /opt/harness --ignore-scripts @qwen-code/qwen-code@0.21.14 \
+ && /opt/harness/bin/qwen --version \
+ && rm -rf /root/.npm /tmp/*
+
+ENV PATH=/opt/harness/bin:$PATH \
+    DO_NOT_TRACK=1 \
+    QWEN_CODE_SUPPRESS_YOLO_WARNING=1
+
+WORKDIR /work
+
+ENTRYPOINT []
+CMD ["/opt/harness/bin/qwen", "--version"]

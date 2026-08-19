@@ -34,6 +34,9 @@ future machine behaves differently.
 | `opencode` | `node@sha256:253da198…7a24` | `opencode-ai@`**1.18.18** | 632 MB |
 | `hermes` | `python@sha256:9c900dea…bfc9` (python:3.11-slim) | `NousResearch/hermes-agent` @ `e02d1e41fc6104187e20af9eac8b2820566e3508` (v0.20.4), deps via `uv sync --locked` | 446 MB |
 | `codex` | `debian@sha256:817e6cf9…ade0` (bookworm-slim) | OpenAI Codex CLI **0.147.0**, `codex-package-aarch64-unknown-linux-musl.tar.gz`, sha256 `89cbf79b…1401` checked in-build | 428 MB |
+| `terminus-2` | `python@sha256:2c941e86…3c4a` (python:3.12-slim, trixie) | `terminal-bench`**==0.2.18** from PyPI into a venv; agent class `terminal_bench.agents.terminus_2.Terminus2` | 865 MB |
+| `cursor` | `debian@sha256:817e6cf9…ade0` (bookworm-slim) | Cursor CLI **2026.08.11-e8db854**, `agent-cli-local-package.tar.gz`, sha256 `30482dfb…f284` checked in-build | 502 MB |
+| `qwen-code` | `bench/base:pinned` (node:22-slim, digest-pinned) | `@qwen-code/qwen-code@`**0.21.14** (`--ignore-scripts`) | 537 MB |
 
 In-image paths the runner invokes (recorded as `container.argvRewrite` in
 `runner/harnesses.json`):
@@ -45,7 +48,10 @@ In-image paths the runner invokes (recorded as `container.argvRewrite` in
 | `claude` | `/opt/harness/bin/claude` | `/home/bench` |
 | `opencode` | `/opt/harness/bin/opencode` | `/home/bench` |
 | `hermes` | `/opt/harness/bin/hermes` | `/home/bench` |
+| `terminus-2` | `/opt/harness/bin/terminus-2` (`terminus-2/entry.py`) | `/home/bench` |
 | `codex` | `/opt/harness/bin/codex` | `/home/bench` |
+| `cursor` | `/opt/harness/bin/cursor-agent-local` | `{{WORKDIR}}/.bench-cursor-home` |
+| `qwen-code` | `/opt/harness/bin/qwen` | `{{WORKDIR}}/.bench-qwen-home` |
 
 Every image uses `WORKDIR /work`, a clean empty `HOME`, and no host home is ever mounted.
 Rootless podman maps the container's root to the invoking host user, so files the agent
@@ -137,12 +143,25 @@ planted marker never appears in the prompt. Repo-instruction discovery stays off
   shell; the harness's own `ipython` tool turned out to be a Bun JS/TS REPL, so that layer
   can be dropped if size matters more.
 - `claude` is 682 MB mostly because the CLI itself is a 311 MB native binary.
-- `codex` (added late, harness owned by another worker) is built and wired but **not
-  token-verified**: it speaks the OpenAI *Responses* API (`/v1/responses`), which the proxy
-  does not yet rewrite or meter. Confirmed with the zero-cost sink that the container
-  starts, reads its per-run `CODEX_HOME` config and posts `/v1/responses` to
-  `host.containers.internal` with the pinned model. Re-run the smoke check once the proxy
-  handles that shape.
+- `codex` is now **token-verified containerized**: exit 0, one `/responses` row,
+  `providerServed = DeepInfra`, 10,615 promptTokens. It speaks only the OpenAI *Responses*
+  API, which the proxy rewrites and meters; the earlier "run `--native` until the proxy
+  handles that shape" advice is obsolete. Its row is written up to ~31 s after the harness
+  exits (the responses shape carries no provider name, so the proxy looks it up from
+  `GET /api/v1/generation`), which is why `runner/run.ts` waits for a row rather than for
+  an empty log to go quiet.
+- `qwen-code` is a fork of Gemini CLI, registered under its own id. Upstream
+  `@google/gemini-cli` has no Containerfile because it cannot be pinned at all: no
+  OpenAI-compatible mode exists in 0.55.1, so it stays disabled in the registry.
+- `terminus-2` is the only harness that is not a CLI: it is a Python class the upstream
+  terminal-bench harness drives, and it acts by typing into a tmux session. `terminus-2/entry.py`
+  is the whole adapter — it starts a local tmux session and hands it to a stock `Terminus2`.
+  Upstream's `TmuxSession` runs every tmux command through `docker exec` into a *separate* task
+  container; the adapter subclasses it and swaps only that exec primitive for a local subprocess
+  (and disables asciinema recording, an upstream bench artefact). Prompts, parsers, episode loop
+  and token accounting are untouched. `tmux` is therefore a hard runtime dependency of the image.
+  It also has no instruction-file discovery of any kind, so the baseline `AGENTS.md` is planted
+  for parity but never reaches its context — reported, per `spec/fairness.md`.
 - `aider`, `cline` and `pi` appeared in `harnesses.json` after this work started and have
   no images yet; they keep running natively until Containerfiles are added.
 
