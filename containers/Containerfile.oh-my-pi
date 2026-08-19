@@ -1,0 +1,57 @@
+# oh-my-pi harness image for the coding-agent benchmark.
+#
+# Build (tiny context, everything is downloaded):
+#   podman build -t bench/oh-my-pi:pinned -f containers/Containerfile.oh-my-pi containers
+#
+# CLI path (runner invokes this exact path): /opt/harness/bin/pi
+# Pinned versions: @earendil-works/pi-coding-agent 0.84.2 + oh-my-pi 0.2.0
+#
+# oh-my-pi is an EXTENSION, not a separate agent: `pi install oh-my-pi` registers a package that
+# pi auto-discovers and loads, replacing the stock system prompt with an orchestrator prompt and
+# adding its own agents and skills. So this image is the same pinned pi as the `pi` harness with
+# the extension present, and the runner must NOT pass pi's -ne/-ns/-np/-na switches, which would
+# disable extensions, skills, prompts and agents -- exactly what is under measurement.
+#
+# No host ~/.pi, ~/.agents or ~/.config is ever read; HOME=/home/bench starts empty.
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24 AS build
+
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+# pi itself, plus the extension staged at a stable path.
+#
+# `pi install` writes two things: a `packages` entry in the agent dir's settings.json, and an npm
+# tree under that agent dir. The runner gives every run a fresh agent dir inside the bind-mounted
+# workdir and can only materialise files there, not directory trees -- so the npm half cannot be
+# recreated per run without network access at measurement time. Staging the package at a fixed
+# path instead lets the per-run settings.json register it by path, which `pi list` resolves.
+RUN npm install -g --prefix /opt/harness @earendil-works/pi-coding-agent@0.84.2 \
+ && npm install -g --prefix /opt/build oh-my-pi@0.2.0 \
+ && mv /opt/build/lib/node_modules/oh-my-pi /opt/harness/oh-my-pi \
+ && rm -rf /opt/build /root/.npm /tmp/*
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+
+# pi shells out to git and ripgrep. Lean: no recommends, no apt lists.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ripgrep ca-certificates \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+COPY --from=build /opt/harness /opt/harness
+
+# Empty, writable, in-image HOME. Never a host home.
+RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
+
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:$PATH \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    DO_NOT_TRACK=1
+
+WORKDIR /work
+
+ENTRYPOINT []
+CMD ["/opt/harness/bin/pi", "--version"]

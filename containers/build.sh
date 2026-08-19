@@ -30,7 +30,7 @@ extra_args_for() {
 	esac
 }
 
-ALL=(prime-agent-fork prime-agent-upstream claude opencode hermes codex cursor)
+ALL=(prime-agent-fork prime-agent-upstream claude opencode hermes codex cursor oh-my-pi)
 WANTED=("${@+$@}")
 if [ ${#WANTED[@]} -eq 0 ]; then WANTED=("${ALL[@]}"); fi
 

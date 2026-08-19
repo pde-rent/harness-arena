@@ -15,6 +15,7 @@ Credentials: `source ~/.prime-bench.env` → `OPENROUTER_API_KEY`, `BENCH_MODEL`
 | Hermes | `/Users/derpa/.local/bin/hermes` | git @ `~/.hermes/hermes-agent` (py 3.11.15) | `-z PROMPT` | yes (`--usage-file`) |
 | Prime Agent (upstream) | `/Users/derpa/.bench-harnesses/prime-agent-upstream/node_modules/.bin/prime-agent` | 0.7.3 | `-p --mode json` | yes (per-message) |
 | Codex CLI | `/Users/derpa/.bench-harnesses/codex/bin/codex` | 0.147.0 | `exec --json` | yes (turn.completed) |
+| oh-my-pi | `/opt/harness/bin/pi` (in image) | pi 0.84.2 + omp 0.2.0 | `-p --mode json` | yes (per-message) |
 
 Observed provider for `$BENCH_MODEL` unpinned: **StreamLake** (from
 `GET /api/v1/generation?id=<responseId>`, model resolved to
@@ -511,6 +512,46 @@ fixes the documented hermes metering gap.
   a non-OpenAI model. `model_context_window` does not silence it.
 - Verified live: exit 0, no prompt, one request, `providerServed=DeepInfra`,
   **9 879 promptTokens** for "reply with exactly: ok".
+
+---
+
+## 9. oh-my-pi (can1357/oh-my-pi)
+
+<https://github.com/can1357/oh-my-pi> — npm `oh-my-pi@0.2.0`.
+
+**It is an extension, not a separate agent.** `pi install oh-my-pi` registers a package that pi
+auto-discovers and loads on the next session; the `oh-my-pi` binary in the package is only a
+`doctor`/`init` diagnostic tool and never runs a task. So the harness is the same pinned pi as the
+`pi` entry, with the extension present.
+
+What it changes, per its README: replaces pi's default system prompt with an orchestrator prompt
+that routes work to specialist sub-agents, and adds its own agents (oracle, librarian, explore) and
+a skill system with full instruction injection. Configured through `.oh-my-pi.jsonc`.
+
+### Registry consequence
+
+The bare `pi` entry runs with `-ne -ns -np -na` — no extensions, no skills, no prompts, no agents —
+which is the right shape for measuring pi itself. Those switches must **not** be carried over here:
+each one disables part of what oh-my-pi installs, so copying pi's argv would benchmark stock pi
+under another name. The `oh-my-pi` entry therefore passes none of them.
+
+Pairing the two entries is the point: `pi` is the control, `oh-my-pi` is the treatment, and the
+difference between them is the extension's effect. Both receive the identical
+`corpus/AGENT_INSTRUCTIONS.md` baseline file per `spec/baseline.md`, so the instruction channel is
+held constant and only the harness differs.
+
+### Container
+
+`bench/oh-my-pi:pinned`, from `containers/Containerfile.oh-my-pi`: node:22-slim pinned by digest,
+both packages installed into one prefix so the extension sits beside the CLI that loads it, empty
+in-image `HOME=/home/bench`, git and ripgrep present because pi shells out to them.
+
+### Not yet measured
+
+No smoke run or fixed-context measurement has been taken for this harness yet, so it has no row in
+the fixed-context table below. Its prompt overhead is expected to differ substantially from bare
+pi, since replacing the system prompt is the extension's primary function — that difference is a
+result to report, not a fault to correct.
 
 ## Fixed context overhead — all harnesses
 
