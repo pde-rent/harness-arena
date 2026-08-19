@@ -31,6 +31,7 @@ itself.
 | `codex` | 0.147.0 |
 | `hermes` | git @ `~/.hermes/hermes-agent` |
 | `terminus-2` | terminal-bench 0.2.18 |
+| `terminus-kira` | krafton-ai/KIRA @ `652dacbf` (harbor 0.1.44) |
 | `aider` | pending |
 | `cline` | pending |
 | `cursor` | 2026.08.11-e8db854 (`agent-cli-local` build) |

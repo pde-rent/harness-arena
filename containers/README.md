@@ -35,6 +35,7 @@ future machine behaves differently.
 | `hermes` | `python@sha256:9c900dea…bfc9` (python:3.11-slim) | `NousResearch/hermes-agent` @ `e02d1e41fc6104187e20af9eac8b2820566e3508` (v0.20.4), deps via `uv sync --locked` | 446 MB |
 | `codex` | `debian@sha256:817e6cf9…ade0` (bookworm-slim) | OpenAI Codex CLI **0.147.0**, `codex-package-aarch64-unknown-linux-musl.tar.gz`, sha256 `89cbf79b…1401` checked in-build | 428 MB |
 | `terminus-2` | `python@sha256:2c941e86…3c4a` (python:3.12-slim, trixie) | `terminal-bench`**==0.2.18** from PyPI into a venv; agent class `terminal_bench.agents.terminus_2.Terminus2` | 865 MB |
+| `terminus-kira` | `python@sha256:2c941e86…3c4a` (python:3.12-slim, trixie) | `harbor`**==0.1.44** + `krafton-ai/KIRA` @ `652dacbf14d29ea93a83c496ee91e0e5ba286721` (source checkout, not on PyPI) | 1.33 GB |
 | `cursor` | `debian@sha256:817e6cf9…ade0` (bookworm-slim) | Cursor CLI **2026.08.11-e8db854**, `agent-cli-local-package.tar.gz`, sha256 `30482dfb…f284` checked in-build | 502 MB |
 | `qwen-code` | `bench/base:pinned` (node:22-slim, digest-pinned) | `@qwen-code/qwen-code@`**0.21.14** (`--ignore-scripts`) | 537 MB |
 
@@ -49,6 +50,7 @@ In-image paths the runner invokes (recorded as `container.argvRewrite` in
 | `opencode` | `/opt/harness/bin/opencode` | `/home/bench` |
 | `hermes` | `/opt/harness/bin/hermes` | `/home/bench` |
 | `terminus-2` | `/opt/harness/bin/terminus-2` (`terminus-2/entry.py`) | `/home/bench` |
+| `terminus-kira` | `/opt/harness/bin/terminus-kira` (`terminus-kira/entry.py`) | `/home/bench` |
 | `codex` | `/opt/harness/bin/codex` | `/home/bench` |
 | `cursor` | `/opt/harness/bin/cursor-agent-local` | `{{WORKDIR}}/.bench-cursor-home` |
 | `qwen-code` | `/opt/harness/bin/qwen` | `{{WORKDIR}}/.bench-qwen-home` |
@@ -162,6 +164,17 @@ planted marker never appears in the prompt. Repo-instruction discovery stays off
   and token accounting are untouched. `tmux` is therefore a hard runtime dependency of the image.
   It also has no instruction-file discovery of any kind, so the baseline `AGENTS.md` is planted
   for parity but never reaches its context — reported, per `spec/fairness.md`.
+- `terminus-kira` is the same shape of adapter one framework generation later. It subclasses
+  *harbor*'s Terminus 2 (harbor is the successor package to terminal-bench) and pins harbor
+  0.1.44, the version its own `uv.lock` resolves — so it deliberately does not share the
+  terminus-2 image. It is not on PyPI in any form, so the checkout is pinned by commit SHA and
+  the repo root goes on `PYTHONPATH` (the agent resolves its prompt template relative to its own
+  source file and imports a top-level `anthropic_caching` module that only exists there).
+  `harbor run` is **not** used: it brings its own container, task format and grader, so it would
+  measure a different corpus scored by a different grader. `terminus-kira/entry.py` implements
+  harbor's `BaseEnvironment` against this container (exec via subprocess, upload/download via
+  shutil) and hands it to the stock agent, whose own `TmuxSession` is unmodified. Unlike
+  terminus-2 it uses native tool calling, so its requests carry a `tools` schema.
 - `aider`, `cline` and `pi` appeared in `harnesses.json` after this work started and have
   no images yet; they keep running natively until Containerfiles are added.
 

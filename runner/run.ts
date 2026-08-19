@@ -166,6 +166,28 @@ async function settleUsageLog(logPath: string, runId: string, quietMs = 4000, ma
  * money is the one signal that moves even when a request bypasses us entirely. Returns null
  * when the lookup fails — a failed lookup must not silently pass a run.
  */
+/**
+ * Poll the account spend until it stops moving, so a lagging charge from the previous run is not
+ * attributed to the next one. Gives up after `maxMs` and returns the last reading rather than
+ * blocking a sweep: a stale baseline can only make the check stricter, never laxer.
+ */
+async function settledAccountSpendUsd(quietMs = 3000, maxMs = 30_000): Promise<number | null> {
+	const deadline = Date.now() + maxMs;
+	let last = await accountSpendUsd();
+	let lastChange = Date.now();
+	while (Date.now() < deadline) {
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+		const now = await accountSpendUsd();
+		if (now !== last) {
+			last = now;
+			lastChange = Date.now();
+		} else if (Date.now() - lastChange >= quietMs) {
+			return last;
+		}
+	}
+	return last;
+}
+
 async function accountSpendUsd(): Promise<number | null> {
 	const key = process.env.OPENROUTER_API_KEY;
 	if (!key) return null;
@@ -250,7 +272,11 @@ async function runOne(harness: HarnessSpec, task: TaskMeta, attempt: number): Pr
 	const stderrPath = join(logDir, `${runId}.stderr.txt`);
 	const started = performance.now();
 
-	const spendBefore = dryRun ? null : await accountSpendUsd();
+	// Settled, not merely sampled. The provider's credits endpoint lags the request that caused the
+	// charge, so in a sweep the previous harness's cost lands inside this run's window and reads as
+	// spend that escaped the meter. Waiting for it to stop moving attributes each charge to the run
+	// that made it; it does not widen the tolerance, so a real leak is still caught.
+	const spendBefore = dryRun ? null : await settledAccountSpendUsd();
 
 	if (!dryRun) {
 		proxy = await startProxy(runId, harness.id, usageLog);

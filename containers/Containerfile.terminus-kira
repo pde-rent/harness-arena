@@ -1,0 +1,82 @@
+# Terminus-KIRA harness image for the coding-agent benchmark.
+#
+#   podman build -t bench/terminus-kira:pinned -f containers/Containerfile.terminus-kira containers
+#
+# Launcher (fixed path the runner invokes): /opt/harness/bin/terminus-kira
+# Pinned harness version: krafton-ai/KIRA @ 652dacbf14d29ea93a83c496ee91e0e5ba286721,
+# against harbor 0.1.44 -- the version KIRA's own uv.lock resolves. harbor is the
+# successor package to terminal-bench; KIRA subclasses harbor's Terminus2, so it does
+# NOT share the terminal-bench 0.2.18 image used by the terminus-2 harness.
+#
+# KIRA is not on PyPI in any form; the package name `terminus-kira` is unclaimed (404).
+# It ships only as this repo, so the checkout is pinned by commit SHA and the repo root
+# goes on PYTHONPATH: the agent resolves its prompt template relative to its own source
+# file (../prompt-templates/terminus-kira.txt) and imports a top-level `anthropic_caching`
+# module that only exists at the repo root.
+#
+# Python, so this does NOT build FROM bench/base:pinned (node:22-slim).
+# tmux is a hard runtime dependency: the agent acts by typing into a tmux session.
+
+# python:3.12-slim (Debian trixie) pinned by digest.
+ARG BASE=docker.io/library/python@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
+ARG HARBOR_VERSION=0.1.44
+ARG KIRA_REPO=https://github.com/krafton-ai/KIRA.git
+ARG KIRA_SHA=652dacbf14d29ea93a83c496ee91e0e5ba286721
+
+FROM ${BASE}
+ARG HARBOR_VERSION
+ARG KIRA_REPO
+ARG KIRA_SHA
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tmux git ripgrep ca-certificates procps && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
+
+RUN python3 -m venv /opt/harness/venv && \
+    /opt/harness/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/harness/venv/bin/pip install --no-cache-dir \
+        "harbor==${HARBOR_VERSION}" anthropic litellm tenacity && \
+    rm -rf /root/.cache
+
+# Shallow-fetch just the pinned commit; the agent is a source checkout, not a package.
+RUN mkdir -p /opt/harness/kira && \
+    git -C /opt/harness/kira init -q && \
+    git -C /opt/harness/kira remote add origin "${KIRA_REPO}" && \
+    git -C /opt/harness/kira fetch -q --depth 1 origin "${KIRA_SHA}" && \
+    git -C /opt/harness/kira checkout -q "${KIRA_SHA}" && \
+    git -C /opt/harness/kira rev-parse HEAD > /opt/harness/kira/.bench-pinned-sha && \
+    rm -rf /opt/harness/kira/.git /opt/harness/kira/KIRA-Slack /opt/harness/kira/KiraClaw
+
+ENV PYTHONPATH=/opt/harness/kira
+
+RUN /opt/harness/venv/bin/python -c \
+    "from terminus_kira.terminus_kira import TerminusKira; print(TerminusKira.name())"
+
+COPY terminus-kira/entry.py /opt/harness/entry.py
+
+RUN mkdir -p /opt/harness/bin && \
+    printf '%s\n' '#!/bin/sh' \
+      'exec /opt/harness/venv/bin/python /opt/harness/entry.py "$@"' \
+      > /opt/harness/bin/terminus-kira && \
+    chmod 0755 /opt/harness/bin/terminus-kira
+
+# tmux pipe-pane writes the pane transcript to harbor's in-environment agent log dir,
+# which harbor would normally mount; create it so the session can start.
+RUN mkdir -p /logs/agent && chmod 0777 /logs/agent
+
+# Clean HOME: created empty, never populated with any config.
+RUN mkdir -p /home/bench && chmod 0777 /home/bench
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:/opt/harness/venv/bin:/usr/local/bin:/usr/bin:/bin \
+    DO_NOT_TRACK=1 \
+    KIRA_PINNED_SHA=${KIRA_SHA} \
+    HARBOR_VERSION=${HARBOR_VERSION}
+
+RUN mkdir -p /work
+WORKDIR /work
+ENTRYPOINT []
+CMD ["/opt/harness/bin/terminus-kira", "--help"]

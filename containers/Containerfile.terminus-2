@@ -1,0 +1,62 @@
+# Terminus-2 harness image for the coding-agent benchmark.
+#
+#   podman build -t bench/terminus-2:pinned -f containers/Containerfile.terminus-2 containers
+#
+# Launcher (fixed path the runner invokes): /opt/harness/bin/terminus-2
+# Pinned harness version: terminal-bench 0.2.18 (ships terminal_bench/agents/terminus_2).
+#
+# Python, so this does NOT build FROM bench/base:pinned (node:22-slim) -- python:3.12-slim
+# pinned by digest instead. terminal-bench requires python >= 3.12.
+#
+# Terminus2 is a class driven by the terminal-bench harness, not a CLI, and it works by
+# typing into a tmux session. terminus-2/entry.py is the whole adapter: it starts a local
+# tmux session and hands it to the stock agent. tmux is therefore a hard runtime dep.
+#
+# No host ~/.config or ~/.cache is ever read; HOME is created empty here.
+
+# python:3.12-slim (Debian trixie) pinned by digest.
+ARG BASE=docker.io/library/python@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
+ARG TERMINAL_BENCH_VERSION=0.2.18
+
+FROM ${BASE}
+ARG TERMINAL_BENCH_VERSION
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# tmux is the agent's only interface to the machine; git + ripgrep are the tools every
+# other harness image also provides; ca-certificates for the proxy path.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tmux git ripgrep ca-certificates procps && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
+
+# Isolated venv, exact pinned version, no transitive drift beyond what the release declares.
+RUN python3 -m venv /opt/harness/venv && \
+    /opt/harness/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/harness/venv/bin/pip install --no-cache-dir "terminal-bench==${TERMINAL_BENCH_VERSION}" && \
+    /opt/harness/venv/bin/python -c "from terminal_bench.agents.terminus_2 import Terminus2; print(Terminus2.name())" && \
+    find /opt/harness/venv -name '__pycache__' -type d -prune -exec rm -rf {} + && \
+    rm -rf /root/.cache
+
+COPY terminus-2/entry.py /opt/harness/entry.py
+
+RUN mkdir -p /opt/harness/bin && \
+    printf '%s\n' '#!/bin/sh' \
+      'exec /opt/harness/venv/bin/python /opt/harness/entry.py "$@"' \
+      > /opt/harness/bin/terminus-2 && \
+    chmod 0755 /opt/harness/bin/terminus-2
+
+# Clean HOME: created empty, never populated with any config.
+RUN mkdir -p /home/bench && chmod 0777 /home/bench
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:/opt/harness/venv/bin:/usr/local/bin:/usr/bin:/bin \
+    DO_NOT_TRACK=1 \
+    TERMINAL_BENCH_VERSION=${TERMINAL_BENCH_VERSION}
+
+# mkdir explicitly: a trailing WORKDIR alone is not committed as a layer by buildah,
+# so /work must exist before the benchmark bind-mounts onto it.
+RUN mkdir -p /work
+WORKDIR /work
+ENTRYPOINT []
+CMD ["/opt/harness/bin/terminus-2", "--help"]

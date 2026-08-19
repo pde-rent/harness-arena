@@ -33,7 +33,7 @@ extra_args_for() {
 # The node-based images build FROM localhost/bench/base:pinned, so the base is built first and is
 # not itself a harness. See Containerfile.base for why they share a base but not one image.
 BASE_IMAGE=base
-ALL=(optimus-prime prime-agent-upstream claude opencode hermes codex cursor pi oh-my-pi cline aider terminus-2 qwen-code)
+ALL=(optimus-prime prime-agent-upstream claude opencode hermes codex cursor pi oh-my-pi cline aider terminus-2 qwen-code terminus-kira)
 WANTED=("${@+$@}")
 if [ ${#WANTED[@]} -eq 0 ]; then WANTED=("${ALL[@]}"); fi
 
