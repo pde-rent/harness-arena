@@ -87,6 +87,11 @@ async function sh(cmd: string[], opts: { cwd?: string; env?: Record<string, stri
 	const proc = Bun.spawn(cmd, {
 		cwd: opts.cwd,
 		env: { ...process.env, ...opts.env },
+		// Closed, not inherited. Every harness takes its prompt through argv, and one that finds an
+		// open stdin may wait on it: codex exec appends piped stdin to the prompt and announced
+		// "Reading additional input from stdin..." before exiting non-zero without ever calling the
+		// model.
+		stdin: "ignore",
 		stdout: "pipe",
 		stderr: "pipe",
 	});
@@ -356,10 +361,17 @@ async function runOne(harness: HarnessSpec, task: TaskMeta, attempt: number): Pr
 
 	const usage = foldUsage(usageLog, runId);
 
+	// A run that solved the task without a single metered request did not solve it here: either it
+	// answered from somewhere the proxy never saw, or it never called a model at all. codex reported
+	// a turn with 10,615 input tokens while the proxy logged nothing, which is indistinguishable
+	// from an unpinned run and must not enter a ranking.
+	const reachedTheMeter = dryRun || usage.requests > 0;
+
 	// Every model call must have passed the meter. Two independent checks, because each
 	// catches what the other misses: the proxy sees refusals it blocked, while the account
 	// spend moves for requests that never reached the proxy at all.
 	const violations = violationsFor(usageLog, runId);
+	if (solved && !reachedTheMeter) violations.push("no_metered_request");
 	const spendAfter = dryRun ? null : await accountSpendUsd();
 	const unmetered =
 		spendBefore !== null && spendAfter !== null
