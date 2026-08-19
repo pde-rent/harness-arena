@@ -32,13 +32,17 @@ itself.
 | `hermes` | git @ `~/.hermes/hermes-agent` |
 | `terminus-2` | terminal-bench 0.2.18 |
 | `terminus-kira` | krafton-ai/KIRA @ `652dacbf` (harbor 0.1.44) |
-| `aider` | pending |
-| `cline` | pending |
+| `aider` | 0.86.2 |
+| `cline` | 3.0.55 |
 | `cursor` | 2026.08.11-e8db854 (`agent-cli-local` build) |
 | `qwen-code` | 0.21.14 (fork of Gemini CLI) |
 | `gemini-cli` | not pinnable — no OpenAI-compatible mode |
 
 Names are the registry ids from `runner/harnesses.json` — the same strings `--harnesses` takes.
+
+A preliminary run across all thirteen, with per-harness payload and fixed context cost:
+[docs/preliminary-comparison.md](docs/preliminary-comparison.md). It measures overhead and
+wiring, not capability — the solve-rate corpus has not been run.
 
 `pi` and `oh-my-pi` are a control/treatment pair: the same pinned pi, with and without the
 extension that replaces its system prompt, so the difference between them is the extension.
