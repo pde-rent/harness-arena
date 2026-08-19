@@ -60,6 +60,15 @@ const ALLOW_UNPINNED = process.env.BENCH_ALLOW_UNPINNED === "1";
 // not a rewritable shape is refused.
 const SAFE_READONLY = /^\/(models(\/[^/]+)*|generation|key|credits|auth(\/.*)?)$/;
 
+// Harness handshake/telemetry endpoints that carry no model, no prompt and no tokens. They are
+// still refused -- nothing unpinnable is proxied -- but the refusal is not a pin violation, so it
+// cannot discard an otherwise correctly pinned run.
+//
+// Claude Code calls /api/hello once at startup. Counting that as a violation threw away runs whose
+// actual model traffic was pinned exactly right, which is a false negative in the direction that
+// silently removes a harness from the comparison.
+const NON_BILLABLE_HANDSHAKE = /^\/api\/hello$/;
+
 const argPort = (() => {
   const i = process.argv.indexOf("--port");
   return i >= 0 ? Number(process.argv[i + 1]) : 0;
@@ -252,6 +261,14 @@ const server = Bun.serve({
       writeRow({ path, model: MODEL, status: 200, note: "models_catalogue_served_by_shim" });
       return new Response(JSON.stringify(body), {
         status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    if (!kind && NON_BILLABLE_HANDSHAKE.test(path)) {
+      writeRow({ path, model: null, status: 404, note: "non_billable_handshake_refused" });
+      return new Response(JSON.stringify({ error: "not served by the bench proxy" }), {
+        status: 404,
         headers: { "content-type": "application/json" },
       });
     }

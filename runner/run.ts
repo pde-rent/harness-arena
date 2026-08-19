@@ -346,7 +346,13 @@ async function runOne(harness: HarnessSpec, task: TaskMeta, attempt: number): Pr
 		env: { WORKDIR: workdir },
 		timeoutMs: 180_000,
 	});
-	const solved = verify.exitCode === 0;
+	// A harness that exited non-zero did not complete its turn, whatever the verifier then found.
+	// Grading purely on the verifier reported a PASS for a crashed harness that never reached the
+	// model, because a task may legitimately verify something the model was not needed for --
+	// smoke-ok grades only that the workdir exists. Treating the crash as its own outcome keeps a
+	// broken harness out of the solve rate instead of inflating it.
+	const harnessCrashed = exitCode !== null && exitCode !== 0;
+	const solved = verify.exitCode === 0 && !harnessCrashed;
 
 	const usage = foldUsage(usageLog, runId);
 
