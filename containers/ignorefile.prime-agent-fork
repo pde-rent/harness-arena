@@ -1,0 +1,20 @@
+# Ignorefile for Containerfile.prime-agent-fork (pass with --ignorefile).
+# Context = /private/tmp/prime-agent/packages/coding-agent (which contains
+# node_modules + sources); allow-list only the prebuilt runtime assets so the
+# build context stays ~14M instead of hundreds of MB.
+*
+!package.json
+!dist
+dist/*
+!dist/bundle
+!dist/skills
+!dist/core
+dist/core/*
+!dist/core/export-html
+!dist/modes
+dist/modes/*
+!dist/modes/interactive
+dist/modes/interactive/*
+!dist/modes/interactive/theme
+!dist/modes/interactive/assets
+**/*.map

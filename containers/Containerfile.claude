@@ -1,0 +1,46 @@
+# Claude Code CLI harness image for the coding-agent benchmark.
+#
+# Build (tiny context, everything is downloaded):
+#   podman build -t bench/claude:pinned -f /private/tmp/bench-harnesses/containers/Containerfile.claude /private/tmp/bench-harnesses/containers
+#
+# CLI path (runner invokes this exact path): /opt/harness/bin/claude
+# Pinned CLI version: 2.1.234  (npm @anthropic-ai/claude-code@2.1.234)
+# No host ~/.claude is ever read or copied; HOME=/home/bench starts empty.
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24 AS build
+
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+# Install the pinned CLI into a self-contained prefix, then drop the npm cache.
+RUN npm install -g --prefix /opt/harness @anthropic-ai/claude-code@2.1.234 \
+ && npm cache clean --force \
+ && rm -rf /root/.npm /tmp/*
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+
+# Claude Code shells out to git; ripgrep is used for search (vendored copy may be
+# arch-specific, so provide the system one too). Lean: no recommends, no apt lists.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ripgrep ca-certificates \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+COPY --from=build /opt/harness /opt/harness
+
+# Empty, writable, in-image HOME. Never a host home.
+RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
+
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:$PATH \
+    DISABLE_AUTOUPDATER=1 \
+    DISABLE_TELEMETRY=1 \
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
+    NPM_CONFIG_UPDATE_NOTIFIER=false
+
+WORKDIR /work
+
+ENTRYPOINT []
+CMD ["/opt/harness/bin/claude", "--help"]

@@ -1,0 +1,21 @@
+{
+  "envConfigPath": "conf/prod.toml",
+  "envOverriddenFields": [
+    "compression_ratio",
+    "batch_max_events",
+    "retention_days",
+    "replication_factor"
+  ],
+  "peakEventsPerSecond": 17700,
+  "avgPayloadBytes": 1400,
+  "compressedPeakBytesPerSecond": 7080000,
+  "eventsPerBatch": 640,
+  "batchesPerSecond": 28,
+  "shardsRequired": 7,
+  "bindingShardLimitField": "shard_max_mib_per_second",
+  "retentionWindowDays": 31,
+  "hotTierBytes": 33480000000000,
+  "hotTierGib": 31181,
+  "monthlyCostUsd": 868.08,
+  "maxRetentionDaysWithinBudget": 20
+}

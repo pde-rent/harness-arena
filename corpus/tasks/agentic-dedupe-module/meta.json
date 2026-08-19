@@ -1,0 +1,8 @@
+{
+  "id": "agentic-dedupe-module",
+  "category": "agentic",
+  "fixture": "pipeline",
+  "difficulty": "medium",
+  "timeoutSeconds": 1200,
+  "description": "Multi-step build: author a dependency-free bounded duplicate-id window module to an exact spec, wire it into runPipeline/runPipelineBatch through the existing dependency-injection shape so redelivered ids are suppressed without breaking any existing behaviour, and add a new test file covering it."
+}

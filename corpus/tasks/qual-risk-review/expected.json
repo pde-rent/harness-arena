@@ -1,0 +1,10 @@
+{
+  "verdict": "accept-with-changes",
+  "riskFile": "proposed/src/handlers/audit.ts",
+  "riskSymbol": "dispatchAuditStage",
+  "riskKind": "cached-failure",
+  "affectedEventKinds": ["audit"],
+  "existingTestsCatchIt": false,
+  "correctlyHandledFile": "proposed/src/handlers/trace.ts",
+  "falsifiedClaim": "C4"
+}

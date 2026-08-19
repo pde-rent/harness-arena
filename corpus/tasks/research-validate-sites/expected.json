@@ -1,0 +1,14 @@
+{
+  "callSites": [
+    { "file": "cmd/geosvcd/main.go", "enclosing": "cmd/geosvcd/run",       "receiverType": "config.Config", "propagatesUnchanged": false },
+    { "file": "service/service.go",  "enclosing": "service/New",           "receiverType": "config.Config", "propagatesUnchanged": true  },
+    { "file": "service/service.go",  "enclosing": "service/Service.Put",   "receiverType": "store.Feature", "propagatesUnchanged": true  },
+    { "file": "httpapi/encode.go",   "enclosing": "httpapi/decodeFeature", "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/memstore.go",   "enclosing": "store/MemStore.Insert", "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/memstore.go",   "enclosing": "store/MemStore.Update", "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/memstore.go",   "enclosing": "store/MemStore.Load",   "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/wal.go",        "enclosing": "store/WAL.Append",      "receiverType": "store.Record",  "propagatesUnchanged": false }
+  ],
+  "receiverTypes": ["config.Config", "store.Feature", "store.Record"],
+  "delegatingMutators": ["Upsert"]
+}

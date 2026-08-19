@@ -1,0 +1,11 @@
+{
+  "entriesInPeriodA": 74,
+  "entriesInPeriodB": 75,
+  "netReversalPairs": 2,
+  "unmatchedIdsOnlyInA": ["TX-0170", "TX-0171"],
+  "unmatchedIdsOnlyInB": ["TX-0102-REV", "TX-0172", "TX-0174"],
+  "materialDifferenceCount": 4,
+  "largestMaterialDifferenceId": "TX-0180",
+  "totalDifferenceMinorUnits": 512,
+  "currencyMismatchId": "TX-0150"
+}

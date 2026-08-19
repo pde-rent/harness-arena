@@ -1,0 +1,100 @@
+# Hermes (Nous Research) coding-agent harness image.
+#
+# Build (tiny context — the image downloads everything itself):
+#   podman build -f /private/tmp/bench-harnesses/containers/Containerfile.hermes \
+#     -t bench/hermes:pinned /private/tmp/bench-harnesses/containers
+#
+# Launcher (fixed path the runner invokes): /opt/harness/bin/hermes
+# Runner supplies at run time: HERMES_HOME=<workdir>/.bench-hermes-home,
+# CUSTOM_BASE_URL, OPENAI_API_KEY, HERMES_ACCEPT_HOOKS=1, DO_NOT_TRACK=1
+# plus a per-run config.yaml. NOTHING from the host ~/.hermes is baked in.
+
+# python:3.11-slim (Debian trixie, CPython 3.11.15) pinned by digest
+ARG BASE=docker.io/library/python@sha256:9c900dea9e8fb7e16277c179b555cc72d29a352dbc33cff48ad5a0412fd5bfc7
+# hermes-agent checkout pinned to the same commit as the native install
+ARG HERMES_REPO=https://github.com/NousResearch/hermes-agent.git
+ARG HERMES_SHA=e02d1e41fc6104187e20af9eac8b2820566e3508
+
+########## builder: clone @ SHA + build the venv with uv ##########
+FROM ${BASE} AS builder
+ARG HERMES_REPO
+ARG HERMES_SHA
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    UV_NO_CACHE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ca-certificates build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv==0.11.6
+
+# Shallow-fetch just the pinned commit (full clone is ~118 MB of .git).
+RUN mkdir -p /opt/harness/hermes-agent && \
+    git -C /opt/harness/hermes-agent init -q && \
+    git -C /opt/harness/hermes-agent remote add origin "${HERMES_REPO}" && \
+    git -C /opt/harness/hermes-agent fetch -q --depth 1 origin "${HERMES_SHA}" && \
+    git -C /opt/harness/hermes-agent checkout -q "${HERMES_SHA}" && \
+    git -C /opt/harness/hermes-agent rev-parse HEAD > /opt/harness/hermes-agent/.bench-pinned-sha && \
+    rm -rf /opt/harness/hermes-agent/.git
+
+# venv lives at <checkout>/venv, exactly like the native install, so the
+# in-image shim mirrors the native `venv/bin/python <checkout>/hermes`.
+# Base dependency set only (no --extra all): the bench never uses matrix /
+# whisper / browser / computer-use extras and they add GBs.
+# uv.lock => hash-verified resolution, reproducible across rebuilds.
+WORKDIR /opt/harness/hermes-agent
+RUN uv venv venv --python /usr/local/bin/python3.11 && \
+    VIRTUAL_ENV=/opt/harness/hermes-agent/venv \
+    UV_PROJECT_ENVIRONMENT=/opt/harness/hermes-agent/venv \
+    uv sync --locked --no-dev && \
+    find /opt/harness/hermes-agent/venv -name '__pycache__' -type d -prune -exec rm -rf {} + && \
+    rm -rf /root/.cache
+
+# Drop what a headless one-shot bench run never touches (~100 MB).
+# apps/ = Electron desktop app + bootstrap installer, no Python entry point
+# references it; tests/website/docs are dev-only.
+RUN rm -rf tests tests-js website contributors evals docs mcp-research-data \
+           apps .github assets/*.mp4 sqlite_leak_fix.png log.txt
+
+########## runtime ##########
+FROM ${BASE}
+ARG HERMES_SHA
+ENV DEBIAN_FRONTEND=noninteractive
+
+# git + ripgrep are agent tools; ca-certificates for the proxy TLS path.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ripgrep ca-certificates && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
+
+COPY --from=builder /opt/harness /opt/harness
+
+# Shim equivalent to the native bash launcher
+# (native: <checkout>/venv/bin/python <checkout>/hermes).
+RUN mkdir -p /opt/harness/bin && \
+    printf '%s\n' '#!/bin/sh' \
+      'exec /opt/harness/hermes-agent/venv/bin/python /opt/harness/hermes-agent/hermes "$@"' \
+      > /opt/harness/bin/hermes && \
+    chmod 0755 /opt/harness/bin/hermes && \
+    ln -sf /opt/harness/bin/hermes /usr/local/bin/hermes
+
+# Clean HOME: created empty, never populated with any hermes config.
+# HERMES_HOME is overridden per run by the runner into the bind-mounted workdir;
+# this default keeps a bare `podman run` from writing outside /home/bench.
+RUN mkdir -p /home/bench && chmod 0777 /home/bench
+ENV HOME=/home/bench \
+    HERMES_HOME=/home/bench/.hermes \
+    PATH=/opt/harness/bin:/usr/local/bin:/usr/bin:/bin \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DO_NOT_TRACK=1 \
+    HERMES_PINNED_SHA=${HERMES_SHA}
+
+# mkdir explicitly: a trailing WORKDIR alone is not committed as a layer by
+# buildah, so /work must exist before the benchmark bind-mounts onto it.
+RUN mkdir -p /work
+WORKDIR /work
+ENTRYPOINT []
+CMD ["/opt/harness/bin/hermes", "--help"]

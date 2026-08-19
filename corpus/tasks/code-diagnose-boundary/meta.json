@@ -1,0 +1,8 @@
+{
+  "id": "code-diagnose-boundary",
+  "category": "coding",
+  "fixture": "ledger",
+  "difficulty": "medium",
+  "timeoutSeconds": 900,
+  "description": "An off-by-one in the zero-padding of the money formatter drops the leading zero for sub-unit amounts; no existing test catches it and the symptom is reported from a downstream consumer, so the root cause must be traced from the CSV export back into the formatter."
+}

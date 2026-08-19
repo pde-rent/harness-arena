@@ -1,0 +1,8 @@
+{
+  "id": "research-validate-sites",
+  "category": "research",
+  "fixture": "geosvc",
+  "difficulty": "medium",
+  "timeoutSeconds": 720,
+  "description": "Enclosing-scope attribution over the 7.5k-line Go service: for all eight call sites of a method named Validate, spread over five packages, name the enclosing function, resolve which of the three same-named Validate methods is actually invoked by typing the receiver expression, decide per site whether the error is propagated unchanged, and identify the exported MemStore mutator that delegates validation instead of performing it. Grep handles this badly: it returns the eight lines instantly but says nothing about which function encloses each one, and the three distinct Validate methods are textually indistinguishable at the call site, so the receiver's type has to be traced back through struct fields and parameter declarations; a case-insensitive or substring search also drags in the five unexported config validate methods that are out of scope. An index gives enclosing scope and the resolved callee for each site directly, turning the task into a lookup instead of eight manual type traces."
+}

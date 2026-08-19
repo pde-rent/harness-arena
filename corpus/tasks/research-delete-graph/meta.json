@@ -1,0 +1,8 @@
+{
+  "id": "research-delete-graph",
+  "category": "research",
+  "fixture": "taskq",
+  "difficulty": "medium",
+  "timeoutSeconds": 600,
+  "description": "Determine the blast radius of deleting src/graph.ts: direct importers, imported symbols, and which test files would fail, as answer.json."
+}

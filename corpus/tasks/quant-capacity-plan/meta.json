@@ -1,0 +1,8 @@
+{
+  "id": "quant-capacity-plan",
+  "category": "quantitative",
+  "fixture": "capacity",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "Derive a full ingest-capacity plan for the active deployment as answer.json: peak events/s from per-hour measured rates of the billable fleet only, average payload, post-compression throughput, batch fill under a >= size threshold in KiB, batches/s, shards under two per-shard ceilings one of which is in MiB/s, the inclusive retention window and replicated hot-tier bytes, GiB, the tiered monthly invoice after a free allowance, and the largest retention that still fits the budget - with an environment TOML overriding four defaults that silently change four of those steps."
+}

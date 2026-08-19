@@ -1,0 +1,8 @@
+{
+  "id": "research-retry-policy",
+  "category": "research",
+  "fixture": "pipeline",
+  "difficulty": "easy",
+  "timeoutSeconds": 480,
+  "description": "Locate the retry policy definition, report its parameters, the exact backoff delay sequence it produces including clamping, and which policy the alert path uses, as answer.json."
+}

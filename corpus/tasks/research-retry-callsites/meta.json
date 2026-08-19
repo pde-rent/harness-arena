@@ -1,0 +1,8 @@
+{
+  "id": "research-retry-callsites",
+  "category": "research",
+  "fixture": "pipeline",
+  "difficulty": "medium",
+  "timeoutSeconds": 600,
+  "description": "Enumerate every withRetry call site across the source tree and identify which ones bypass metrics reporting, as answer.json."
+}

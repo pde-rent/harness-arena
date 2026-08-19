@@ -1,0 +1,8 @@
+{
+  "id": "qual-spec-conflict",
+  "category": "qualitative",
+  "fixture": "ledger",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "Judge a seven-requirement feature specification against the ledger's existing invariants, establish that it is unsatisfiable, name the contradictory pair and the function and error code that make them irreconcilable, say which of the two must be relaxed, and partition all seven requirements into implementable and blocked, as answer.json."
+}

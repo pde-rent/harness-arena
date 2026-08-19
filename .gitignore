@@ -7,3 +7,10 @@ results/**/logs/
 # never commit credentials or raw metering that may embed prompts
 .env
 *.local.json
+
+# run outputs and scratch — regenerated, large, and may embed prompts
+results/
+.verify-all/
+.verify-baseline/
+.scratch/
+proxy/requests.ndjson

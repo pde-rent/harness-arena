@@ -1,0 +1,8 @@
+{
+  "id": "code-refactor-validators",
+  "category": "coding",
+  "fixture": "pipeline",
+  "difficulty": "medium",
+  "timeoutSeconds": 900,
+  "description": "The three validator modules under src/validate each carry their own near-identical copy of the same issue-construction, field-lookup and measurement helpers; the copies must be consolidated into one shared implementation with no behaviour change, the existing suite green and the public API of src/validate/index.ts untouched."
+}

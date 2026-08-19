@@ -1,0 +1,5 @@
+{
+  "directImporters": ["src/scheduler.ts", "src/promote.ts", "src/serialize.ts", "src/index.ts"],
+  "importedSymbols": ["CycleError", "DependencyGraph", "GraphEdge"],
+  "failingTestFiles": ["tests/graph.test.ts", "tests/scheduler.test.ts", "tests/serialize.test.ts"]
+}

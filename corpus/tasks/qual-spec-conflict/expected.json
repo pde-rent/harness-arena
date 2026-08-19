@@ -1,0 +1,10 @@
+{
+  "satisfiable": false,
+  "conflictingRequirements": ["R3", "R6"],
+  "violatedInvariant": "validateEntries",
+  "invariantFile": "src/entries.ts",
+  "violatedInvariantErrorCode": "TX_UNBALANCED",
+  "requirementToRelax": "R6",
+  "implementableAsWritten": ["R1", "R2", "R4"],
+  "blockedByConflict": ["R3", "R5", "R6", "R7"]
+}

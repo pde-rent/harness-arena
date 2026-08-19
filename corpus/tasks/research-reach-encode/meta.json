@@ -1,0 +1,8 @@
+{
+  "id": "research-reach-encode",
+  "category": "research",
+  "fixture": "geosvc",
+  "difficulty": "hard",
+  "timeoutSeconds": 900,
+  "description": "Whole-graph backward reachability on the 7.5k-line Go service: enumerate every function that can transitively reach store.EncodeFeature under a stated edge model that resolves calls through repository-declared interfaces to every implementing type, then name the cut vertices on the paths from the HTTP feature route to that sink. Grep handles this badly: EncodeFeature has exactly one textual call site, so the answer is invisible to any string match and has to be chained backwards eight hops through appendLocked, the WAL, MemStore.Upsert and two interface hops (store.Store in CopyFeatures, httpapi.Backend in the handlers) whose call text never mentions the callee's type; the decoys (MemStore.Load, Compact, SetWAL, OpenLog, cmd/geosvcd/run registering handlers as values) are textually closer to the sink than the real answers. An index gives the call graph directly and makes the cut-vertex question a graph query rather than a manual transitive closure."
+}

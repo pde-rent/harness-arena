@@ -1,0 +1,8 @@
+{
+  "id": "research-index-signature",
+  "category": "research",
+  "fixture": "geosvc",
+  "difficulty": "hard",
+  "timeoutSeconds": 900,
+  "description": "Cross-package impact analysis on the 7.5k-line Go service: given a proposed error return added to two methods of the index.Index interface, enumerate every declaration that stops compiling and, separately, every function that keeps compiling untouched while silently dropping the new error, then the packages involved. Grep handles this badly: searching for Remove returns thirteen non-test lines of which nine are container/list calls in three unrelated cache files, searching for Search returns store.MemStore.Search, and neither search can tell a call whose result is assigned (a compile error) from a bare call statement (still legal, silently lossy) or follow the propagation one hop further into index.SearchFiltered and from there into service.Service.Query. An index resolves each selector to its declaring type and gives the callers of the interface methods directly, which is the whole task."
+}

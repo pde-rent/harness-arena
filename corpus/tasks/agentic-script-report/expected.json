@@ -1,0 +1,141 @@
+{
+  "finalTime": 2411,
+  "ticks": 9,
+  "ranCount": 8,
+  "idleCount": 1,
+  "executionOrder": [
+    "d",
+    "f",
+    "a",
+    "b",
+    "b",
+    "d",
+    "b",
+    "c"
+  ],
+  "counts": {
+    "pending": 0,
+    "ready": 0,
+    "running": 0,
+    "done": 4,
+    "failed": 2,
+    "cancelled": 0
+  },
+  "tasks": {
+    "a": {
+      "state": "done",
+      "attempts": 1,
+      "result": "a:ok",
+      "error": null,
+      "startedAt": 1000,
+      "finishedAt": 1000
+    },
+    "b": {
+      "state": "done",
+      "attempts": 3,
+      "result": 2411,
+      "error": null,
+      "startedAt": 2411,
+      "finishedAt": 2411
+    },
+    "c": {
+      "state": "done",
+      "attempts": 1,
+      "result": "c:ok",
+      "error": null,
+      "startedAt": 2411,
+      "finishedAt": 2411
+    },
+    "d": {
+      "state": "failed",
+      "attempts": 2,
+      "result": null,
+      "error": "boom",
+      "startedAt": 1255,
+      "finishedAt": 1255
+    },
+    "e": {
+      "state": "failed",
+      "attempts": 0,
+      "result": null,
+      "error": "dependency failed: d",
+      "startedAt": null,
+      "finishedAt": 1255
+    },
+    "f": {
+      "state": "done",
+      "attempts": 1,
+      "result": {
+        "n": 42
+      },
+      "error": null,
+      "startedAt": 1000,
+      "finishedAt": 1000
+    }
+  },
+  "hookSequence": [
+    "audit:onEnqueue:a",
+    "audit:onEnqueue:b",
+    "audit:onEnqueue:c",
+    "audit:onEnqueue:d",
+    "audit:onEnqueue:e",
+    "audit:onEnqueue:f",
+    "audit:onStart:d",
+    "audit:onFail:d",
+    "audit:onStart:f",
+    "audit:onComplete:f",
+    "audit:onStart:a",
+    "audit:onComplete:a",
+    "audit:onStart:b",
+    "audit:onFail:b",
+    "audit:onStart:b",
+    "audit:onFail:b",
+    "audit:onStart:d",
+    "audit:onFail:d",
+    "audit:onStart:b",
+    "audit:onComplete:b",
+    "audit:onStart:c",
+    "audit:onComplete:c"
+  ],
+  "pluginNames": [
+    "audit"
+  ],
+  "pluginErrorCount": 0,
+  "drained": true,
+  "topoOrder": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f"
+  ],
+  "snapshot": {
+    "version": 1,
+    "time": 2411,
+    "seq": 6,
+    "rngState": 2332836374,
+    "taskCount": 6,
+    "edgeCount": 3
+  },
+  "restored": {
+    "now": 2411,
+    "counts": {
+      "pending": 0,
+      "ready": 0,
+      "running": 0,
+      "done": 4,
+      "failed": 2,
+      "cancelled": 0
+    },
+    "bAttempts": 3,
+    "bResult": 2411,
+    "eError": "dependency failed: d",
+    "drained": true
+  },
+  "$ordered": [
+    "executionOrder",
+    "hookSequence",
+    "topoOrder"
+  ]
+}

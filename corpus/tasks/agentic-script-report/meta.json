@@ -1,0 +1,8 @@
+{
+  "id": "agentic-script-report",
+  "category": "agentic",
+  "fixture": "taskq",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "Write scripts/report.ts that drives the scheduler through a fully specified deterministic scenario (retries, backoff jitter, dependency chain, cascading failure, plugin hooks, snapshot round-trip) and writes report.json; graded by running the script and comparing the artifact."
+}

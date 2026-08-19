@@ -1,0 +1,11 @@
+{
+  "satisfiable": false,
+  "conflictingRequirements": ["R3", "R6"],
+  "violatedInvariant": "validateEntries",
+  "invariantFile": "src/entries.ts",
+  "violatedInvariantErrorCode": "TX_UNBALANCED",
+  "requirementToRelax": "R6",
+  "implementableAsWritten": ["R1", "R2", "R4"],
+  "blockedByConflict": ["R3", "R5", "R6", "R7"],
+  "notes": "R6 demands an opening transaction of exactly two entries: a debit of the full invoice total and a credit of the first period's part only, with no entry anywhere for the deferred remainder. R1 guarantees at least two rows and every part at least one minor unit, so the first part is always strictly less than the total, and the two entries can never sum equal. R3 demands that every transaction the feature produces go through Journal.post and never be unbalanced. Journal.post calls validateEntries (src/entries.ts), which compares totalFor(entries, 'debit') with totalFor(entries, 'credit') and throws LedgerError TX_UNBALANCED when they differ; createTransaction calls it too, so there is no route around it. R3 is a restatement of a rule the library already enforces and cannot be relaxed without changing existing exported behaviour, so R6 is the requirement that has to give - for example by posting the remainder to a deferred-revenue account, which R6 explicitly forbids. R5 reads its figures back from the R6 and R7 transactions and R7 mirrors the R6 transaction, so both fall with R6. R1 (validation), R2 (exact split, which allocate in src/money.ts already provides by largest-remainder distribution) and R4 (a stable ordering of schedule rows, from sorted in src/compare.ts) are independent of the conflict and implementable as written."
+}

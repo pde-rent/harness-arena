@@ -1,0 +1,19 @@
+{
+  "compileBreaking": [
+    "index/Index",
+    "index/GridIndex.Search",
+    "index/GridIndex.Remove",
+    "index/RTree.Search",
+    "index/RTree.Remove",
+    "index/SearchFiltered",
+    "service/Service.Query",
+    "service/Service.Tile"
+  ],
+  "behaviourOnly": [
+    "index/GridIndex.Insert",
+    "index/RTree.Insert",
+    "service/Service.Delete"
+  ],
+  "packagesAffected": ["index", "service"],
+  "notes": "index/Index is the declaration being changed. The two implementations are fixed by the assertions in index/factory.go (_ Index = (*RTree)(nil), _ Index = (*GridIndex)(nil)), so GridIndex.Search, GridIndex.Remove, RTree.Search and RTree.Remove must match the new signatures or NewIndex and those assertions stop compiling. index/SearchFiltered writes all := ix.Search(b), a single-value assignment from a now two-value call, so it breaks; it cannot handle the error locally and has no error result yet, so it gains one, which in turn breaks service/Service.Query at entries := index.SearchFiltered(...). service/Service.Tile breaks directly at entries := s.ix.Search(box). Query and Tile already return an error, so their own signatures are unchanged and nothing propagates past them: httpapi is untouched, because Backend.Query and Backend.Tile keep their signatures. behaviourOnly is the three bare call statements: g.Remove(e.ID) in GridIndex.Insert, t.Remove(e.ID) in RTree.Insert and s.ix.Remove(id) in Service.Delete. A call statement that ignores all of its results is legal whatever the result list is, so all three compile untouched and simply discard the new error. Uniqueness: the split is decided purely by whether the call's results are bound at the call site, which is a syntactic fact with one reading, and the stated assumptions forbid both opportunistic edits and unforced signature changes. Decoys that are not in either list: the nine container/list Remove calls in index/cache_lru.go, index/cache_seg.go and index/tilecache.go, store/MemStore.Search and store/MemStore.Delete, index/NewIndex, and the whole httpapi package."
+}

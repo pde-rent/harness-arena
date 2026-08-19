@@ -1,0 +1,24 @@
+{
+  "reachers": [
+    "store/EncodeRecord",
+    "store/WAL.Append",
+    "store/MemStore.appendLocked",
+    "store/MemStore.Insert",
+    "store/MemStore.Update",
+    "store/MemStore.Delete",
+    "store/MemStore.Upsert",
+    "store/CopyFeatures",
+    "service/Service.Put",
+    "service/Service.Delete",
+    "httpapi/Router.putFeature",
+    "httpapi/Router.deleteFeature",
+    "httpapi/Router.handleFeature"
+  ],
+  "reachingPackages": ["httpapi", "service", "store"],
+  "cutFunctions": [
+    "store/EncodeRecord",
+    "store/WAL.Append",
+    "store/MemStore.appendLocked"
+  ],
+  "notes": "EncodeFeature is called only by EncodeRecord (store/codec.go:184); EncodeRecord only by WAL.Append (store/wal.go:151); WAL.Append only by MemStore.appendLocked (store/memstore.go:381); appendLocked by MemStore.Insert, Update and Delete. Upsert reaches through Insert/Update. store.CopyFeatures calls dst.Insert through the store.Store interface, whose only repository implementation is *MemStore. service.Service.Put calls s.store.Upsert and Service.Delete calls s.store.Delete on the concrete *store.MemStore. httpapi.Router.putFeature and deleteFeature call Backend.Put/Backend.Delete; httpapi.Backend is declared in this repository and *service.Service is its only implementation here. Router.handleFeature calls putFeature and deleteFeature directly. Router.ServeHTTP is NOT a reacher: it dispatches through http.Handler, declared outside this repository, and NewRouter only registers the handlers as values, which the stated rules exclude. Uniqueness: every hop from the sink up to Service.Put/Service.Delete is a single caller, so the set is forced; the only judgement calls are the two interface hops, and the task fixes them by rule. Non-reachers that look close: MemStore.Load, Compact, SetWAL, OpenLog, Close and cmd/geosvcd/run. Cut vertices: both paths out of handleFeature (via putFeature/Upsert/{Insert,Update} and via deleteFeature/MemStore.Delete) merge at appendLocked and then run single-file through WAL.Append and EncodeRecord, so exactly those three are cuts; Upsert, Insert, Update, MemStore.Delete, putFeature and deleteFeature each leave the other branch intact."
+}

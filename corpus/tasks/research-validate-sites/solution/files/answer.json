@@ -1,0 +1,15 @@
+{
+  "callSites": [
+    { "file": "cmd/geosvcd/main.go", "enclosing": "cmd/geosvcd/run",       "receiverType": "config.Config", "propagatesUnchanged": false },
+    { "file": "service/service.go",  "enclosing": "service/New",           "receiverType": "config.Config", "propagatesUnchanged": true  },
+    { "file": "service/service.go",  "enclosing": "service/Service.Put",   "receiverType": "store.Feature", "propagatesUnchanged": true  },
+    { "file": "httpapi/encode.go",   "enclosing": "httpapi/decodeFeature", "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/memstore.go",   "enclosing": "store/MemStore.Insert", "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/memstore.go",   "enclosing": "store/MemStore.Update", "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/memstore.go",   "enclosing": "store/MemStore.Load",   "receiverType": "store.Feature", "propagatesUnchanged": false },
+    { "file": "store/wal.go",        "enclosing": "store/WAL.Append",      "receiverType": "store.Record",  "propagatesUnchanged": false }
+  ],
+  "receiverTypes": ["config.Config", "store.Feature", "store.Record"],
+  "delegatingMutators": ["Upsert"],
+  "notes": "Eight call sites: cmd/geosvcd/main.go:56 (cfg.Validate, cfg is config.Config, wrapped with fmt.Errorf); service/service.go:50 (cfg.Validate, returns nil, err unchanged); service/service.go:87 (f.Validate on the *store.Feature parameter, returns false, err unchanged); httpapi/encode.go:215 inside decodeFeature (f is the *store.Feature just built, the error is turned into BadRequest so it is not propagated unchanged); store/memstore.go:88 and :115 in Insert and Update, and :362 inside the range loop of Load, all on *store.Feature, all wrapped with fmt.Errorf; store/wal.go:148 in WAL.Append on the Record value r, wrapped. Out of scope by the stated rule: the three declarations (config/validate.go:42, store/feature.go:99, store/wal.go:62) and the five unexported config methods spelled validate, which a case-insensitive search would wrongly include. Uniqueness: each site has exactly one innermost named enclosing function and one statically known receiver type, and propagatesUnchanged is decided by whether the failure branch returns the identifier from Validate itself; the memstore.go:362 site is inside Load's loop, whose enclosing named function is MemStore.Load, not a literal. delegatingMutators: the exported MemStore methods that add or replace a feature are Insert, Update, Upsert and Load; Insert, Update and Load each call Validate in their own body, Upsert does not and instead routes through Update or Insert, so Upsert is the only answer. Delete only removes, so it is out of scope."
+}

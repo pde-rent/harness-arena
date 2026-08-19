@@ -1,0 +1,45 @@
+# Build:
+#   podman build -f /private/tmp/bench-harnesses/containers/Containerfile.codex \
+#     -t bench/codex:pinned /private/tmp/bench-harnesses/containers
+#
+# OpenAI Codex CLI 0.147.0, native aarch64 musl release artifact (static -> runs on debian).
+# Artifact: https://github.com/openai/codex/releases/download/rust-v0.147.0/codex-package-aarch64-unknown-linux-musl.tar.gz
+# sha256 published in release asset codex-package_SHA256SUMS; verified at build time.
+
+# ---- stage 1: fetch + verify + prune ----
+FROM docker.io/library/debian@sha256:817e6cf99d6fc127ff4ffe8580049b60deba0adfbbb2bd65ddc3ef8fbb7aade0 AS fetch
+
+ARG CODEX_VERSION=0.147.0
+ARG CODEX_TARBALL=codex-package-aarch64-unknown-linux-musl.tar.gz
+ARG CODEX_SHA256=89cbf79bd5ae6f9c58da47e8079f311c84219350c9c43c070d42f3e9b2a81401
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl; \
+    curl -fsSL -o /tmp/codex.tar.gz \
+      "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/${CODEX_TARBALL}"; \
+    echo "${CODEX_SHA256}  /tmp/codex.tar.gz" | sha256sum -c -; \
+    mkdir -p /opt/harness; \
+    tar -xzf /tmp/codex.tar.gz -C /opt/harness; \
+    # code-mode host is unused by `codex exec`; drop 47MB
+    rm -f /opt/harness/bin/codex-code-mode-host /tmp/codex.tar.gz; \
+    chmod 0755 /opt/harness/bin/codex /opt/harness/codex-path/rg; \
+    /opt/harness/bin/codex --version
+
+# ---- stage 2: runtime ----
+FROM docker.io/library/debian@sha256:817e6cf99d6fc127ff4ffe8580049b60deba0adfbbb2bd65ddc3ef8fbb7aade0
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates git; \
+    rm -rf /var/lib/apt/lists/*; \
+    mkdir -p /work /home/bench; \
+    chmod 0777 /home/bench /work
+
+COPY --from=fetch /opt/harness /opt/harness
+
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    DO_NOT_TRACK=1
+
+WORKDIR /work

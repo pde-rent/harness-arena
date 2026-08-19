@@ -1,0 +1,23 @@
+{
+  "reachers": [
+    "store/EncodeRecord",
+    "store/WAL.Append",
+    "store/MemStore.appendLocked",
+    "store/MemStore.Insert",
+    "store/MemStore.Update",
+    "store/MemStore.Delete",
+    "store/MemStore.Upsert",
+    "store/CopyFeatures",
+    "service/Service.Put",
+    "service/Service.Delete",
+    "httpapi/Router.putFeature",
+    "httpapi/Router.deleteFeature",
+    "httpapi/Router.handleFeature"
+  ],
+  "reachingPackages": ["store", "service", "httpapi"],
+  "cutFunctions": [
+    "store/MemStore.appendLocked",
+    "store/WAL.Append",
+    "store/EncodeRecord"
+  ]
+}

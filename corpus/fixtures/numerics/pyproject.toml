@@ -1,0 +1,9 @@
+[project]
+name = "numerics"
+version = "0.4.0"
+description = "Numerically careful aggregation primitives for telemetry pipelines"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.urls]
+Documentation = "https://example.invalid/numerics"

@@ -1,0 +1,8 @@
+{
+  "id": "qual-risk-review",
+  "category": "qualitative",
+  "fixture": "pipeline",
+  "difficulty": "medium",
+  "timeoutSeconds": 1000,
+  "description": "Review a colleague's unapplied proposal, held as modified copies under proposed/, against the shipping source and report which of the two changed handlers carries a real defect, what kind it is, which event kinds it affects, that the existing suite does not catch it, which sibling file gets the same idea right, and which numbered safety claim it falsifies, as answer.json."
+}

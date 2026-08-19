@@ -1,0 +1,11 @@
+{
+  "interfaceName": "FeatureCache",
+  "recommended": "LRUCache",
+  "rejected": "SegmentedCache",
+  "defectFile": "index/cache_seg.go",
+  "defectSymbol": "evictProbation",
+  "defectKind": "unbounded-growth",
+  "defectTriggerKeys": 129,
+  "callersToUpdate": ["index/factory.go", "service/service.go"],
+  "notes": "SegmentedCache.evictProbation unlinks the coldest probation entry from the probation list, clears its element pointer, marks it segNone, releases its value and decrements the accounted size, but it never removes the key from c.entries. LRUCache.evictOldest, and SegmentedCache.Invalidate itself, both do delete from the map, so the omission is local to this one method. Because Len() reports probation.Len()+protected.Len() and Bytes() is decremented correctly, every externally observable value stays right: no test in the repository can see the leak. The map, however, keeps one dead *segEntry per eviction forever, so a workload that streams distinct keys (the tile renderer scanning cold tiles is exactly that) grows the cache's memory without bound. With the default cache.Entries of 512 and probationDivisor of 4 the probation segment holds 128 entries, so the 129th distinct insertion is the first that evicts and therefore the first that leaks."
+}

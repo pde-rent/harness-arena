@@ -1,0 +1,12 @@
+{
+  "entriesInPeriodA": 74,
+  "entriesInPeriodB": 75,
+  "netReversalPairs": 2,
+  "unmatchedIdsOnlyInA": ["TX-0170", "TX-0171"],
+  "unmatchedIdsOnlyInB": ["TX-0102-REV", "TX-0172", "TX-0174"],
+  "materialDifferenceCount": 4,
+  "largestMaterialDifferenceId": "TX-0180",
+  "totalDifferenceMinorUnits": 512,
+  "currencyMismatchId": "TX-0150",
+  "notes": "Fiscal Q1 2024 in UTC+05:30 spans [2023-12-31T18:30:00Z, 2024-03-31T18:30:00Z). TX-0112 and TX-0113 sit inside that window even though a naive UTC reading would drop TX-0112; TX-0110 and TX-0111 fall outside it. TX-0101/TX-0101-REV net out in both books, while TX-0102-REV has no original in book B and so stays as an ordinary book-B-only row. TX-0120 appears on two book-A rows and collapses to a single +12550 entry. Book B's amountMinor uses the opposite sign convention, so every book-B amount is negated. TX-0150 is recorded as USD in A and JPY in B; book B wins on currency, so A's 120.00 becomes 120 minor units under the zero-exponent currency and the difference is zero. TX-0160 (10.125 USD) rounds half-to-even to 1012 and TX-0161 (20.625 USD) to 2062, which leaves TX-0161 exactly on the 5-unit materiality threshold and therefore immaterial. Material differences: TX-0180 +1000, TX-0181 -500, TX-0132 +6, TX-0160 +6."
+}

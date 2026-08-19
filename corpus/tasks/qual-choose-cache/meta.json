@@ -1,0 +1,8 @@
+{
+  "id": "qual-choose-cache",
+  "category": "qualitative",
+  "fixture": "geosvc",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "A large read-only Go service carries two implementations of one cache interface; one of them leaks map entries on eviction in a way no test catches. Identify the interface, recommend which implementation to keep, locate the defect down to the method, classify it, derive the number of distinct key insertions that first trigger it, and list every non-test file that constructs the rejected implementation, as answer.json."
+}

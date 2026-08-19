@@ -1,0 +1,8 @@
+{
+  "id": "agentic-multifile-fix",
+  "category": "agentic",
+  "fixture": "pipeline",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "Event id canonicalisation (trim + upper case) is implemented three different ways in three different files: the parser trims but does not upper-case, the identity validator upper-cases but does not trim, and the transform step does neither. A padded or lower-case id is therefore parsed, validated and stored under three spellings. The existing suite is green, so the agent must find every site; fixing one file still fails the hidden checks."
+}

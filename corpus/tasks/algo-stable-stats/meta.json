@@ -1,0 +1,8 @@
+{
+  "id": "algo-stable-stats",
+  "category": "algorithmic",
+  "fixture": "numerics",
+  "difficulty": "hard",
+  "timeoutSeconds": 1800,
+  "description": "Three numerically hard cores are stubbed out of a Python telemetry toolkit: a Kahan-Babuska-Neumaier compensated sum that must be order-independent and exact on catastrophically cancelling input while classifying NaN and infinities by inspection, Welford/Chan streaming moments with an associative parallel merge that survives 1e9-shifted samples where the sum-of-squares formula collapses, and exact-rational quantiles with five interpolation rules plus a weighted variant that must stay monotone in p."
+}

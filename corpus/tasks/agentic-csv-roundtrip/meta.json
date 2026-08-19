@@ -1,0 +1,8 @@
+{
+  "id": "agentic-csv-roundtrip",
+  "category": "agentic",
+  "fixture": "ledger",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "The library writes CSV but cannot read it back. Build a new RFC4180-style parser module that inverts the existing writer (quoting, embedded delimiters and newlines, empty fields, custom delimiter, LF and CRLF, LedgerError rejection of malformed input), a typed journal-CSV reader on top of it, wire both into the public index, and add new tests — a multi-step new-module-plus-wiring task graded by hidden behaviour checks."
+}

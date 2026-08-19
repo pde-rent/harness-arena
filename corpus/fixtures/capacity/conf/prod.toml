@@ -1,0 +1,18 @@
+# Production telemetry fleet.
+#
+# Only the fields listed here differ from capacity.config.DEFAULTS. Anything not
+# named below keeps its default value.
+
+# The prod collectors run zstd level 6 rather than the default lz4, measured over
+# a week of real payloads.
+compression_ratio = 3.5
+
+# Prod collectors were given a larger event ceiling per batch after the
+# 2026-03 broker upgrade.
+batch_max_events = 1000
+
+# Contractual hot-tier retention for the prod fleet.
+retention_days = 30
+
+# Three copies, one per availability zone.
+replication_factor = 3

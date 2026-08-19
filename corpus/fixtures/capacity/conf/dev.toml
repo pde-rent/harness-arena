@@ -1,0 +1,7 @@
+# Single-node development deployment. Not the fleet being planned.
+
+compression_ratio = 2.0
+batch_max_events = 200
+retention_days = 3
+replication_factor = 1
+shard_max_events_per_second = 1000

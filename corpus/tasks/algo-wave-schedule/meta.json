@@ -1,0 +1,8 @@
+{
+  "id": "algo-wave-schedule",
+  "category": "algorithmic",
+  "fixture": "taskq",
+  "difficulty": "hard",
+  "timeoutSeconds": 1800,
+  "description": "Implement a wave planner in a new src/waves.ts: condense the dependency graph's strongly connected components so cycles and self-loops are legal input, assign each component a longest-path level (not a breadth-first layering), then first-fit pack the components into capacity-bounded waves in a fully specified deterministic order where deferral cascades downstream and backfilling earlier waves is mandatory, all in O(V+E) for the condensation and levels, graded by hidden known-answer vectors, invariant and permutation-stability checks, and a 40k-node scale check."
+}

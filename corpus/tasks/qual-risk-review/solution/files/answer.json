@@ -1,0 +1,11 @@
+{
+  "verdict": "accept-with-changes",
+  "riskFile": "proposed/src/handlers/audit.ts",
+  "riskSymbol": "dispatchAuditStage",
+  "riskKind": "cached-failure",
+  "affectedEventKinds": ["audit"],
+  "existingTestsCatchIt": false,
+  "correctlyHandledFile": "proposed/src/handlers/trace.ts",
+  "falsifiedClaim": "C4",
+  "notes": "dispatchAuditStage stores the withRetry promise in the per-store memo before it settles and never removes it. A promise that ends in RetryExhaustedError therefore stays in the memo for the lifetime of the record store, so every later delivery of the same audit id at the same stage is served the cached rejection and persistAuditRecord is never called again, even once the store is healthy. proposed/src/handlers/trace.ts applies the identical memo but attaches a catch that deletes the entry on rejection, so only audit events are affected. The visible suite never redelivers an id after a failed persist, so all 54 tests still pass. This falsifies C4; C1, C2, C3, C5 and C6 all hold."
+}

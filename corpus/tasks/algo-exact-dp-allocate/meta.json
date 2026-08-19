@@ -1,0 +1,8 @@
+{
+  "id": "algo-exact-dp-allocate",
+  "category": "algorithmic",
+  "fixture": "numerics",
+  "difficulty": "hard",
+  "timeoutSeconds": 1800,
+  "description": "Two integer-allocation routines are stubbed out of a Python telemetry toolkit and must be rebuilt in exact rational arithmetic: Hamilton apportionment whose three-key remainder/quota/index tie-break decides the last unit, and a minimum-penalty placement over arbitrary per-bucket penalty rows where the marginal-cost greedy exchange argument is only valid under discrete convexity, so non-convex rows force a dynamic program whose reconstruction must run forward to yield the lexicographically smallest optimum."
+}

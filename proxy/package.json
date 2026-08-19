@@ -1,0 +1,9 @@
+{
+  "name": "bench-proxy",
+  "private": true,
+  "comment": "The proxy itself has ZERO runtime dependencies — tokenizer.ts is pure TS over the vendored tokenizer/tokenizer.json. The dev deps exist only so validate-tokenizer.ts can differential-test our BPE against HuggingFace's; nothing under devDependencies is imported by server.ts.",
+  "devDependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "onnxruntime-common": "^1.27.0"
+  }
+}

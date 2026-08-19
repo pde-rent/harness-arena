@@ -1,0 +1,33 @@
+{
+  "callers": [
+    {
+      "file": "src/pipeline.ts",
+      "function": "executeHandler",
+      "passesMetrics": true
+    },
+    {
+      "file": "src/pipeline.ts",
+      "function": "persistDeadLetter",
+      "passesMetrics": true
+    },
+    {
+      "file": "src/handlers/audit.ts",
+      "function": "dispatchAuditStage",
+      "passesMetrics": true
+    },
+    {
+      "file": "src/handlers/alert.ts",
+      "function": "notifyAlertChannel",
+      "passesMetrics": false
+    },
+    {
+      "file": "src/handlers/trace.ts",
+      "function": "exportTraceSpan",
+      "passesMetrics": false
+    }
+  ],
+  "bypassMetrics": [
+    "notifyAlertChannel",
+    "exportTraceSpan"
+  ]
+}

@@ -1,0 +1,74 @@
+# opencode CLI harness image for the coding-agent benchmark.
+#
+# Build (tiny context, everything is downloaded):
+#   podman build -t bench/opencode:pinned -f /private/tmp/bench-harnesses/containers/Containerfile.opencode /private/tmp/bench-harnesses/containers
+#
+# CLI path (runner invokes this exact path): /opt/harness/bin/opencode
+# Pinned CLI version: 1.18.18  (npm opencode-ai@1.18.18, single self-contained binary)
+# No host ~/.local/share/opencode, ~/.config/opencode, ~/.claude or ~/.agents is
+# ever read or copied; HOME=/home/bench starts empty.
+#
+# Provider package note (@ai-sdk/openai-compatible):
+#   opencode 1.18.18 BUNDLES the openai-compatible provider inside its binary --
+#   a `--network=none` run with a `{"provider":{"bench":{"npm":"@ai-sdk/openai-compatible"}}}`
+#   config reaches the HTTP request stage and never creates
+#   $cache/opencode/packages/... (the Npm.add cache dir, = HOME/.cache/opencode/packages/<spec>).
+#   So there is nothing to pre-warm there. What DOES hit the registry at run time is
+#   opencode installing @opencode-ai/plugin (+ @opencode-ai/sdk, @ai-sdk/provider, effect,
+#   zod, ...) into OPENCODE_CONFIG_DIR/node_modules -- a fresh per-run directory that cannot
+#   be baked in. That install is served from the shared npm cache baked in below
+#   (npm_config_cache), so no registry traffic is needed.
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24 AS build
+
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+# 1) Install the pinned CLI, then keep only the single platform binary (bin/opencode.exe
+#    is a hardlink into node_modules/opencode-<platform>; `cp -L` collapses it to one file
+#    so the final image carries the ~183MB binary exactly once).
+RUN npm install -g --prefix /opt/build opencode-ai@1.18.18 \
+ && mkdir -p /opt/harness/bin \
+ && cp -L /opt/build/bin/opencode /opt/harness/bin/opencode \
+ && chmod 755 /opt/harness/bin/opencode \
+ && rm -rf /opt/build /root/.npm /tmp/*
+
+# 2) Pre-warm a shared npm cache (cacache) with everything a run-time
+#    OPENCODE_CONFIG_DIR install needs, plus the provider package for good measure.
+#    The scratch node_modules is discarded; only the content-addressed cache is kept.
+RUN mkdir -p /tmp/warm && cd /tmp/warm \
+ && npm init -y >/dev/null \
+ && npm_config_cache=/opt/harness/npm-cache npm install --no-audit --no-fund \
+      @opencode-ai/plugin@1.18.18 @ai-sdk/openai-compatible \
+ && rm -rf /tmp/warm /root/.npm
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+
+# opencode shells out to git (snapshots / diffs). ripgrep is vendored inside the
+# opencode binary, so it is not installed. Lean: no recommends, no apt lists.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ca-certificates \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+COPY --from=build /opt/harness /opt/harness
+
+# Empty, writable, in-image HOME. Never a host home. No opencode/claude config inside.
+RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
+
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:$PATH \
+    npm_config_cache=/opt/harness/npm-cache \
+    npm_config_prefer_offline=true \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false \
+    OPENCODE_DISABLE_AUTOUPDATE=1 \
+    DO_NOT_TRACK=1
+
+WORKDIR /work
+
+ENTRYPOINT []
+CMD ["/opt/harness/bin/opencode", "--version"]

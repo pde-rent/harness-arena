@@ -1,0 +1,8 @@
+{
+  "id": "quant-reconcile-books",
+  "category": "quantitative",
+  "fixture": "ledger",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "Read-only multi-step reconciliation of two committed exports of the same quarter against a prose policy that defines its rounding, currency-exponent and debit/credit sign semantics by naming functions in src/, producing a nine-key dependent chain — period counts under a fixed UTC+05:30 fiscal boundary, netted reversal pairs, unmatched id sets, material differences past a 5-minor-unit threshold and the signed minor-unit headline total — through traps covering boundary instants, an orphan reversal, a repeated id, a half-to-even rounding case that decides materiality, and a currency disagreement resolved in the settlement gateway's favour."
+}

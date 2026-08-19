@@ -1,0 +1,18 @@
+{
+  "compileBreaking": [
+    "index/Index",
+    "index/GridIndex.Search",
+    "index/GridIndex.Remove",
+    "index/RTree.Search",
+    "index/RTree.Remove",
+    "index/SearchFiltered",
+    "service/Service.Query",
+    "service/Service.Tile"
+  ],
+  "behaviourOnly": [
+    "index/GridIndex.Insert",
+    "index/RTree.Insert",
+    "service/Service.Delete"
+  ],
+  "packagesAffected": ["index", "service"]
+}

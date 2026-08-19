@@ -1,0 +1,11 @@
+{
+  "tilesCovered": 2116,
+  "featuresIndexed": 50784,
+  "leafNodes": 3174,
+  "totalIndexNodes": 3387,
+  "residentIndexBytes": 5959104,
+  "tileCacheCapacity": 431,
+  "cacheHitRate": 0.787,
+  "backingReadsPerMinute": 15380,
+  "notes": "config.DefaultRegion is lat 52.20..52.80, lon 12.90..13.90 and Index.Zoom is 14, so with n=2^14=16384 the north-west corner projects to tile x=8779 y=5352 and the south-east corner to x=8824 y=5397; the inclusive rectangle is 46 by 46 = 2116 tiles. Index.FeaturesPerTile is 24, so 2116*24 = 50784 features. index.RTreeMaxEntries is 16, so ceil(50784/16) = 3174 leaves, and the levels above are 199, 13 and 1, giving 3174+199+13+1 = 3387 nodes. store.FeatureIndexBytes is 96 and index.NodeResidentBytes is 320, so resident bytes are 50784*96 + 3387*320 = 4875264 + 1083840 = 5959104. One cached tile costs 24*96 + index.TileEnvelopeBytes (128) = 2432 bytes, and Cache.TileBudgetBytes defaults to 1<<20 = 1048576, so floor(1048576/2432) = 431 tiles fit. testdata/workload.json records 900 distinct tiles and 722194 requests over a 600 second window; the 431 hottest tiles account for 568826 requests, minus one compulsory miss each leaves 568395 hits, so the hit rate is 568395/722194 = 0.78704... which rounds to 0.7870. The remaining 153799 misses over 10 minutes are ceil(15379.9) = 15380 backing-store reads per minute."
+}

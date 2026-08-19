@@ -1,0 +1,79 @@
+{"txId":"TX-0049","postedAtUtc":"2024-02-23T12:43:00.000Z","account":"assets:receivable:trade","amountMinor":-16337,"currency":"USD","reversalOf":null,"note":"clean settlement 49"}
+{"txId":"TX-0130","postedAtUtc":"2024-02-14T13:00:00.000Z","account":"assets:cash:operating","amountMinor":-19996,"currency":"USD","reversalOf":null,"note":"rounding drift"}
+{"txId":"TX-0026","postedAtUtc":"2024-03-27T16:02:00.000Z","account":"expenses:ops:hosting","amountMinor":-9138,"currency":"USD","reversalOf":null,"note":"clean settlement 26"}
+{"txId":"TX-0172","postedAtUtc":"2024-02-22T10:10:00.000Z","account":"expenses:ops:travel","amountMinor":-16500,"currency":"USD","reversalOf":null,"note":"book B only"}
+{"txId":"TX-0044","postedAtUtc":"2024-03-18T16:08:00.000Z","account":"expenses:ops:hosting","amountMinor":-14772,"currency":"EUR","reversalOf":null,"note":"clean settlement 44"}
+{"txId":"TX-0002","postedAtUtc":"2024-03-03T10:14:00.000Z","account":"expenses:ops:hosting","amountMinor":-1626,"currency":"USD","reversalOf":null,"note":"clean settlement 2"}
+{"txId":"TX-0140","postedAtUtc":"2024-03-04T15:45:00.000Z","account":"income:sales:subscription","amountMinor":75000,"currency":"USD","reversalOf":null,"note":"customer refund"}
+{"txId":"TX-0045","postedAtUtc":"2024-01-19T08:15:00.000Z","account":"expenses:ops:travel","amountMinor":15085,"currency":"USD","reversalOf":null,"note":"clean settlement 45"}
+{"txId":"TX-0150","postedAtUtc":"2024-03-12T08:20:00.000Z","account":"liabilities:payable:trade","amountMinor":-120,"currency":"JPY","reversalOf":null,"note":"cross-border settlement"}
+{"txId":"TX-0053","postedAtUtc":"2024-03-27T16:11:00.000Z","account":"liabilities:payable:trade","amountMinor":-17589,"currency":"USD","reversalOf":null,"note":"clean settlement 53"}
+{"txId":"TX-0058","postedAtUtc":"2024-02-05T12:46:00.000Z","account":"income:sales:subscription","amountMinor":-19154,"currency":"USD","reversalOf":null,"note":"clean settlement 58"}
+{"txId":"TX-0111","postedAtUtc":"2023-12-31T18:29:59.000Z","account":"assets:receivable:trade","amountMinor":-29000,"currency":"USD","reversalOf":null,"note":"at the lower boundary"}
+{"txId":"TX-0006","postedAtUtc":"2024-01-07T14:42:00.000Z","account":"assets:cash:operating","amountMinor":2878,"currency":"USD","reversalOf":null,"note":"clean settlement 6"}
+{"txId":"TX-0047","postedAtUtc":"2024-03-21T10:29:00.000Z","account":"liabilities:payable:trade","amountMinor":-15711,"currency":"USD","reversalOf":null,"note":"clean settlement 47"}
+{"txId":"TX-0014","postedAtUtc":"2024-03-15T13:38:00.000Z","account":"expenses:ops:hosting","amountMinor":-982,"currency":"JPY","reversalOf":null,"note":"clean settlement 14"}
+{"txId":"TX-0037","postedAtUtc":"2024-02-11T09:19:00.000Z","account":"assets:receivable:trade","amountMinor":-12581,"currency":"USD","reversalOf":null,"note":"clean settlement 37"}
+{"txId":"TX-0029","postedAtUtc":"2024-03-03T10:23:00.000Z","account":"liabilities:payable:trade","amountMinor":-10077,"currency":"USD","reversalOf":null,"note":"clean settlement 29"}
+{"txId":"TX-0110","postedAtUtc":"2024-03-31T18:30:00.000Z","account":"assets:cash:operating","amountMinor":-31000,"currency":"USD","reversalOf":null,"note":"at the upper boundary"}
+{"txId":"TX-0009","postedAtUtc":"2024-01-10T08:03:00.000Z","account":"expenses:ops:travel","amountMinor":13233,"currency":"BHD","reversalOf":null,"note":"clean settlement 9"}
+{"txId":"TX-0023","postedAtUtc":"2024-03-24T13:41:00.000Z","account":"liabilities:payable:trade","amountMinor":-1099,"currency":"JPY","reversalOf":null,"note":"clean settlement 23"}
+{"txId":"TX-0032","postedAtUtc":"2024-03-06T13:44:00.000Z","account":"expenses:ops:hosting","amountMinor":-1216,"currency":"JPY","reversalOf":null,"note":"clean settlement 32"}
+{"txId":"TX-0033","postedAtUtc":"2024-01-07T14:51:00.000Z","account":"expenses:ops:travel","amountMinor":11329,"currency":"USD","reversalOf":null,"note":"clean settlement 33"}
+{"txId":"TX-0030","postedAtUtc":"2024-01-04T11:30:00.000Z","account":"assets:cash:operating","amountMinor":10390,"currency":"USD","reversalOf":null,"note":"clean settlement 30"}
+{"txId":"TX-0042","postedAtUtc":"2024-01-16T14:54:00.000Z","account":"assets:cash:operating","amountMinor":14146,"currency":"USD","reversalOf":null,"note":"clean settlement 42"}
+{"txId":"TX-0040","postedAtUtc":"2024-02-14T12:40:00.000Z","account":"income:sales:subscription","amountMinor":-13520,"currency":"USD","reversalOf":null,"note":"clean settlement 40"}
+{"txId":"TX-0055","postedAtUtc":"2024-02-02T09:25:00.000Z","account":"assets:receivable:trade","amountMinor":-18215,"currency":"USD","reversalOf":null,"note":"clean settlement 55"}
+{"txId":"TX-0050","postedAtUtc":"2024-03-24T13:50:00.000Z","account":"expenses:ops:hosting","amountMinor":-1450,"currency":"JPY","reversalOf":null,"note":"clean settlement 50"}
+{"txId":"TX-0024","postedAtUtc":"2024-01-25T14:48:00.000Z","account":"assets:cash:operating","amountMinor":8512,"currency":"USD","reversalOf":null,"note":"clean settlement 24"}
+{"txId":"TX-0046","postedAtUtc":"2024-02-20T09:22:00.000Z","account":"income:sales:subscription","amountMinor":-15398,"currency":"USD","reversalOf":null,"note":"clean settlement 46"}
+{"txId":"TX-0060","postedAtUtc":"2024-01-07T14:00:00.000Z","account":"assets:cash:operating","amountMinor":19780,"currency":"EUR","reversalOf":null,"note":"clean settlement 60"}
+{"txId":"TX-0001","postedAtUtc":"2024-02-02T09:07:00.000Z","account":"assets:receivable:trade","amountMinor":-1313,"currency":"USD","reversalOf":null,"note":"clean settlement 1"}
+{"txId":"TX-0027","postedAtUtc":"2024-01-01T08:09:00.000Z","account":"expenses:ops:travel","amountMinor":15699,"currency":"BHD","reversalOf":null,"note":"clean settlement 27"}
+{"txId":"TX-0038","postedAtUtc":"2024-03-12T10:26:00.000Z","account":"expenses:ops:hosting","amountMinor":-12894,"currency":"USD","reversalOf":null,"note":"clean settlement 38"}
+{"txId":"TX-0102-REV","postedAtUtc":"2024-02-11T09:15:00.000Z","account":"expenses:ops:travel","amountMinor":7200,"currency":"USD","reversalOf":"TX-0102","note":"reversal of TX-0102"}
+{"txId":"TX-0008","postedAtUtc":"2024-03-09T16:56:00.000Z","account":"expenses:ops:hosting","amountMinor":-3504,"currency":"USD","reversalOf":null,"note":"clean settlement 8"}
+{"txId":"TX-0051","postedAtUtc":"2024-01-25T14:57:00.000Z","account":"expenses:ops:travel","amountMinor":16963,"currency":"USD","reversalOf":null,"note":"clean settlement 51"}
+{"txId":"TX-0174","postedAtUtc":"2024-02-23T10:10:00.000Z","account":"income:sales:subscription","amountMinor":4300,"currency":"USD","reversalOf":null,"note":"book B only"}
+{"txId":"TX-0022","postedAtUtc":"2024-02-23T12:34:00.000Z","account":"income:sales:subscription","amountMinor":-7886,"currency":"USD","reversalOf":null,"note":"clean settlement 22"}
+{"txId":"TX-0120","postedAtUtc":"2024-01-18T11:05:00.000Z","account":"income:sales:subscription","amountMinor":-12550,"currency":"USD","reversalOf":null,"note":"split posting"}
+{"txId":"TX-0034","postedAtUtc":"2024-02-08T15:58:00.000Z","account":"income:sales:subscription","amountMinor":-11642,"currency":"USD","reversalOf":null,"note":"clean settlement 34"}
+{"txId":"TX-0052","postedAtUtc":"2024-02-26T15:04:00.000Z","account":"income:sales:subscription","amountMinor":-17276,"currency":"EUR","reversalOf":null,"note":"clean settlement 52"}
+{"txId":"TX-0019","postedAtUtc":"2024-02-20T09:13:00.000Z","account":"assets:receivable:trade","amountMinor":-6947,"currency":"EUR","reversalOf":null,"note":"clean settlement 19"}
+{"txId":"TX-0101","postedAtUtc":"2024-02-05T10:00:00.000Z","account":"assets:receivable:trade","amountMinor":-50000,"currency":"USD","reversalOf":null,"note":"duplicate charge"}
+{"txId":"TX-0007","postedAtUtc":"2024-02-08T15:49:00.000Z","account":"assets:receivable:trade","amountMinor":-3191,"currency":"USD","reversalOf":null,"note":"clean settlement 7"}
+{"txId":"TX-0018","postedAtUtc":"2024-01-19T08:06:00.000Z","account":"assets:cash:operating","amountMinor":6634,"currency":"USD","reversalOf":null,"note":"clean settlement 18"}
+{"txId":"TX-0005","postedAtUtc":"2024-03-06T13:35:00.000Z","account":"liabilities:payable:trade","amountMinor":-865,"currency":"JPY","reversalOf":null,"note":"clean settlement 5"}
+{"txId":"TX-0113","postedAtUtc":"2024-03-31T18:29:59.000Z","account":"expenses:ops:travel","amountMinor":-26000,"currency":"USD","reversalOf":null,"note":"at the upper boundary"}
+{"txId":"TX-0131","postedAtUtc":"2024-02-15T13:00:00.000Z","account":"assets:receivable:trade","amountMinor":-29995,"currency":"USD","reversalOf":null,"note":"rounding drift"}
+{"txId":"TX-0012","postedAtUtc":"2024-01-13T11:24:00.000Z","account":"assets:cash:operating","amountMinor":4756,"currency":"USD","reversalOf":null,"note":"clean settlement 12"}
+{"txId":"TX-0011","postedAtUtc":"2024-03-12T10:17:00.000Z","account":"liabilities:payable:trade","amountMinor":-4443,"currency":"EUR","reversalOf":null,"note":"clean settlement 11"}
+{"txId":"TX-0021","postedAtUtc":"2024-01-22T11:27:00.000Z","account":"expenses:ops:travel","amountMinor":7573,"currency":"USD","reversalOf":null,"note":"clean settlement 21"}
+{"txId":"TX-0028","postedAtUtc":"2024-02-02T09:16:00.000Z","account":"income:sales:subscription","amountMinor":-9764,"currency":"EUR","reversalOf":null,"note":"clean settlement 28"}
+{"txId":"TX-0031","postedAtUtc":"2024-02-05T12:37:00.000Z","account":"assets:receivable:trade","amountMinor":-10703,"currency":"USD","reversalOf":null,"note":"clean settlement 31"}
+{"txId":"TX-0056","postedAtUtc":"2024-03-03T10:32:00.000Z","account":"expenses:ops:hosting","amountMinor":-18528,"currency":"USD","reversalOf":null,"note":"clean settlement 56"}
+{"txId":"TX-0180","postedAtUtc":"2024-03-20T09:00:00.000Z","account":"assets:cash:operating","amountMinor":-99000,"currency":"USD","reversalOf":null,"note":"large settlement"}
+{"txId":"TX-0181","postedAtUtc":"2024-03-21T09:00:00.000Z","account":"assets:receivable:trade","amountMinor":63500,"currency":"USD","reversalOf":null,"note":"large refund"}
+{"txId":"TX-0112","postedAtUtc":"2023-12-31T18:30:00.000Z","account":"expenses:ops:hosting","amountMinor":-27000,"currency":"USD","reversalOf":null,"note":"at the lower boundary"}
+{"txId":"TX-0020","postedAtUtc":"2024-03-21T10:20:00.000Z","account":"expenses:ops:hosting","amountMinor":-7260,"currency":"USD","reversalOf":null,"note":"clean settlement 20"}
+{"txId":"TX-0025","postedAtUtc":"2024-02-26T15:55:00.000Z","account":"assets:receivable:trade","amountMinor":-8825,"currency":"USD","reversalOf":null,"note":"clean settlement 25"}
+{"txId":"TX-0015","postedAtUtc":"2024-01-16T14:45:00.000Z","account":"expenses:ops:travel","amountMinor":5695,"currency":"USD","reversalOf":null,"note":"clean settlement 15"}
+{"txId":"TX-0059","postedAtUtc":"2024-03-06T13:53:00.000Z","account":"liabilities:payable:trade","amountMinor":-19467,"currency":"USD","reversalOf":null,"note":"clean settlement 59"}
+{"txId":"TX-0004","postedAtUtc":"2024-02-05T12:28:00.000Z","account":"income:sales:subscription","amountMinor":-2252,"currency":"USD","reversalOf":null,"note":"clean settlement 4"}
+{"txId":"TX-0013","postedAtUtc":"2024-02-14T12:31:00.000Z","account":"assets:receivable:trade","amountMinor":-5069,"currency":"USD","reversalOf":null,"note":"clean settlement 13"}
+{"txId":"TX-0010","postedAtUtc":"2024-02-11T09:10:00.000Z","account":"income:sales:subscription","amountMinor":-4130,"currency":"USD","reversalOf":null,"note":"clean settlement 10"}
+{"txId":"TX-0054","postedAtUtc":"2024-01-01T08:18:00.000Z","account":"assets:cash:operating","amountMinor":17902,"currency":"USD","reversalOf":null,"note":"clean settlement 54"}
+{"txId":"TX-0161","postedAtUtc":"2024-01-10T16:40:00.000Z","account":"assets:receivable:trade","amountMinor":-2057,"currency":"USD","reversalOf":null,"note":"sub-cent invoice"}
+{"txId":"TX-0043","postedAtUtc":"2024-02-17T15:01:00.000Z","account":"assets:receivable:trade","amountMinor":-14459,"currency":"USD","reversalOf":null,"note":"clean settlement 43"}
+{"txId":"TX-0003","postedAtUtc":"2024-01-04T11:21:00.000Z","account":"expenses:ops:travel","amountMinor":1939,"currency":"EUR","reversalOf":null,"note":"clean settlement 3"}
+{"txId":"TX-0039","postedAtUtc":"2024-01-13T11:33:00.000Z","account":"expenses:ops:travel","amountMinor":13207,"currency":"USD","reversalOf":null,"note":"clean settlement 39"}
+{"txId":"TX-0160","postedAtUtc":"2024-01-09T16:40:00.000Z","account":"assets:cash:operating","amountMinor":-1006,"currency":"USD","reversalOf":null,"note":"sub-cent invoice"}
+{"txId":"TX-0016","postedAtUtc":"2024-02-17T15:52:00.000Z","account":"income:sales:subscription","amountMinor":-6008,"currency":"USD","reversalOf":null,"note":"clean settlement 16"}
+{"txId":"TX-0017","postedAtUtc":"2024-03-18T16:59:00.000Z","account":"liabilities:payable:trade","amountMinor":-6321,"currency":"USD","reversalOf":null,"note":"clean settlement 17"}
+{"txId":"TX-0132","postedAtUtc":"2024-02-16T13:00:00.000Z","account":"expenses:ops:hosting","amountMinor":-39994,"currency":"USD","reversalOf":null,"note":"rounding drift"}
+{"txId":"TX-0048","postedAtUtc":"2024-01-22T11:36:00.000Z","account":"assets:cash:operating","amountMinor":16024,"currency":"USD","reversalOf":null,"note":"clean settlement 48"}
+{"txId":"TX-0041","postedAtUtc":"2024-03-15T13:47:00.000Z","account":"liabilities:payable:trade","amountMinor":-1333,"currency":"JPY","reversalOf":null,"note":"clean settlement 41"}
+{"txId":"TX-0035","postedAtUtc":"2024-03-09T16:05:00.000Z","account":"liabilities:payable:trade","amountMinor":-11955,"currency":"USD","reversalOf":null,"note":"clean settlement 35"}
+{"txId":"TX-0101-REV","postedAtUtc":"2024-02-06T10:00:00.000Z","account":"expenses:ops:hosting","amountMinor":50000,"currency":"USD","reversalOf":"TX-0101","note":"reversal of TX-0101"}
+{"txId":"TX-0057","postedAtUtc":"2024-01-04T11:39:00.000Z","account":"expenses:ops:travel","amountMinor":18841,"currency":"USD","reversalOf":null,"note":"clean settlement 57"}
+{"txId":"TX-0036","postedAtUtc":"2024-01-10T08:12:00.000Z","account":"assets:cash:operating","amountMinor":12268,"currency":"EUR","reversalOf":null,"note":"clean settlement 36"}

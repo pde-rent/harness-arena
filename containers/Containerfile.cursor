@@ -1,0 +1,61 @@
+# Build:
+#   podman build -f /private/tmp/bench-harnesses/containers/Containerfile.cursor \
+#     -t bench/cursor:pinned /private/tmp/bench-harnesses/containers
+#
+# Cursor CLI 2026.08.11-e8db854 -- the `agent-cli-local` build (binary `cursor-agent-local`),
+# which is the ONLY Cursor build that can be pointed at an arbitrary OpenAI-compatible
+# endpoint. The default `agent-cli` build (binary `cursor-agent`) ships no local runtime and
+# hard-refuses --base-url/--authless; see runner/harnesses.json notes.
+#
+# Artifact: https://downloads.cursor.com/lab/2026.08.11-e8db854/linux/arm64/agent-cli-local-package.tar.gz
+# The package is self-contained: it vendors its own node binary, ripgrep and native modules,
+# so no node/npm exists in (or is needed by) this image.
+#
+# Empty build context: everything is fetched and checksum-verified at build time.
+
+# ---- stage 1: fetch + verify ----
+FROM docker.io/library/debian@sha256:817e6cf99d6fc127ff4ffe8580049b60deba0adfbbb2bd65ddc3ef8fbb7aade0 AS fetch
+
+ARG CURSOR_VERSION=2026.08.11-e8db854
+ARG CURSOR_ARCH=arm64
+ARG CURSOR_SHA256=30482dfb8e846e216199972f79b697ec86b33b074f1016e6ab6cd0710c80f284
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl; \
+    curl -fsSL -o /tmp/cursor.tar.gz \
+      "https://downloads.cursor.com/lab/${CURSOR_VERSION}/linux/${CURSOR_ARCH}/agent-cli-local-package.tar.gz"; \
+    echo "${CURSOR_SHA256}  /tmp/cursor.tar.gz" | sha256sum -c -; \
+    mkdir -p /opt/harness/cursor; \
+    tar --strip-components=1 -xzf /tmp/cursor.tar.gz -C /opt/harness/cursor; \
+    rm -f /tmp/cursor.tar.gz; \
+    # drop assets the headless run never touches
+    rm -f /opt/harness/cursor/*.mp4; \
+    mkdir -p /opt/harness/bin; \
+    ln -s /opt/harness/cursor/cursor-agent-local /opt/harness/bin/cursor-agent-local; \
+    chmod 0755 /opt/harness/cursor/cursor-agent-local /opt/harness/cursor/node; \
+    /opt/harness/cursor/cursor-agent-local --version
+
+# ---- stage 2: runtime ----
+FROM docker.io/library/debian@sha256:817e6cf99d6fc127ff4ffe8580049b60deba0adfbbb2bd65ddc3ef8fbb7aade0
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates git; \
+    rm -rf /var/lib/apt/lists/*; \
+    mkdir -p /work /home/bench; \
+    chmod 0777 /home/bench /work
+
+COPY --from=fetch /opt/harness /opt/harness
+
+# HOME and CURSOR_DATA_DIR both live inside the image, never on the host, so no ~/.cursor
+# (global rules, MCP config, credentials, transcripts, indexes) can be read or written.
+# CURSOR_AGENT_CLI_AUTHLESS_MODE=true additionally suppresses the startup DNS probe of
+# api2.cursor.sh; --authless keeps every Cursor backend service out of the run.
+ENV HOME=/home/bench \
+    CURSOR_DATA_DIR=/home/bench/.cursor-data \
+    CURSOR_AGENT_CLI_AUTHLESS_MODE=true \
+    PATH=/opt/harness/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    DO_NOT_TRACK=1
+
+WORKDIR /work

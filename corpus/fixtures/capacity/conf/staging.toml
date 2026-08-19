@@ -1,0 +1,7 @@
+# Staging mirror of prod at one tenth the volume. Not the fleet being planned.
+
+compression_ratio = 3.5
+batch_max_events = 1000
+retention_days = 14
+replication_factor = 2
+hot_tier_free_gib = 250

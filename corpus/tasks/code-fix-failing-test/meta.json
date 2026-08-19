@@ -1,0 +1,8 @@
+{
+  "id": "code-fix-failing-test",
+  "category": "coding",
+  "fixture": "ledger",
+  "difficulty": "easy",
+  "timeoutSeconds": 600,
+  "description": "A seeded defect in the money allocation routine makes four existing tests fail; fix the production code without touching the tests."
+}

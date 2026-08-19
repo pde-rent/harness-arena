@@ -1,0 +1,63 @@
+# Prime Agent upstream harness — PrimeIntellect-ai/prime-agent v0.7.3
+#
+# Build (tiny context, everything is downloaded):
+#   podman build -f /private/tmp/bench-harnesses/containers/Containerfile.prime-agent-upstream \
+#     -t bench/prime-agent-upstream:pinned /private/tmp/bench-harnesses/containers
+#
+# CLI (invoke by this absolute path): /opt/harness/node_modules/.bin/prime-agent
+# HOME: /home/bench   WORKDIR: /work (benchmark bind-mounts task copy here)
+#
+# SIZE TRADEOFF: the postinstall bootstrap (tools + kernel + uv) is run at build
+# time so no run-time network is needed. Its artifacts live in $HOME and add
+# ~485MB (kernel-venv 336MB, uv-managed python 94MB, uv/python bins 48MB) —
+# above the ~400MB guidance. Kept anyway: a benchmark run must not depend on
+# the network. Caches (npm, uv, __pycache__) are pruned in the builder stage.
+# To drop it, unset the PRIME_AGENT_BOOTSTRAP_* / INSTALL_UV envs below; the
+# agent then bootstraps on first run (network required).
+
+# node:22-slim (Debian bookworm, Node 22.x) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24 AS builder
+
+ARG PA_VERSION=0.7.3
+ARG PA_SHA256=2a188738318b91ff91ea77b8a0b215c41543cf0483fcb18a53475dc4e7032784
+
+ENV HOME=/home/bench \
+    PRIME_AGENT_TELEMETRY=0 \
+    DO_NOT_TRACK=1 \
+    PRIME_AGENT_BOOTSTRAP_TOOLS_ON_INSTALL=1 \
+    PRIME_AGENT_BOOTSTRAP_KERNEL_ON_INSTALL=1 \
+    PRIME_AGENT_INSTALL_UV=1
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl; \
+    rm -rf /var/lib/apt/lists/*; \
+    mkdir -p /home/bench /opt/harness; \
+    curl -fsSL -o /tmp/prime-agent.tgz \
+      "https://github.com/PrimeIntellect-ai/prime-agent/releases/download/v${PA_VERSION}/prime-agent-${PA_VERSION}.tgz"; \
+    echo "${PA_SHA256}  /tmp/prime-agent.tgz" | sha256sum -c -; \
+    npm install --prefix /opt/harness --omit=dev --no-audit --no-fund /tmp/prime-agent.tgz; \
+    rm -f /tmp/prime-agent.tgz; \
+    npm cache clean --force; \
+    rm -rf /root/.npm /home/bench/.npm /home/bench/.cache /tmp/*; \
+    find /home/bench /opt/harness -depth -type d -name __pycache__ -exec rm -rf {} +; \
+    chmod -R a+rwX /home/bench /opt/harness
+
+# ---------- final ----------
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+
+ENV HOME=/home/bench \
+    PRIME_AGENT_TELEMETRY=0 \
+    DO_NOT_TRACK=1 \
+    PATH=/opt/harness/node_modules/.bin:/home/bench/.local/bin:$PATH
+
+COPY --from=builder /opt/harness /opt/harness
+COPY --from=builder /home/bench /home/bench
+
+# NOTE: no chmod/chown here on purpose — rewriting perms on the copied trees
+# would duplicate ~800MB into a second layer. Perms are fixed in the builder.
+RUN mkdir -p /work && chmod 0777 /work
+
+WORKDIR /work
+ENTRYPOINT []
+CMD ["/opt/harness/node_modules/.bin/prime-agent", "--help"]

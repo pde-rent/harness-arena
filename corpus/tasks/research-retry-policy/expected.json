@@ -1,0 +1,12 @@
+{
+  "$ordered": ["backoffDelaysMs"],
+  "policyFile": "src/retry.ts",
+  "defaultPolicyName": "DEFAULT_RETRY_POLICY",
+  "maxAttempts": 5,
+  "baseDelayMs": 50,
+  "factor": 3,
+  "maxDelayMs": 1000,
+  "jitterRatio": 0,
+  "backoffDelaysMs": [50, 150, 450, 1000],
+  "alertPolicyName": "AGGRESSIVE_RETRY_POLICY"
+}

@@ -1,0 +1,10 @@
+{
+  "tilesCovered": 2116,
+  "featuresIndexed": 50784,
+  "leafNodes": 3174,
+  "totalIndexNodes": 3387,
+  "residentIndexBytes": 5959104,
+  "tileCacheCapacity": 431,
+  "cacheHitRate": 0.787,
+  "backingReadsPerMinute": 15380
+}

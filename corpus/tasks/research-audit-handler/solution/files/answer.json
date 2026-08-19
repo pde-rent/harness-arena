@@ -1,0 +1,15 @@
+{
+  "file": "src/handlers/audit.ts",
+  "entryFunction": "auditHandler",
+  "finalFunction": "persistAuditRecord",
+  "callChain": [
+    "auditHandler",
+    "routeAuditEvent",
+    "dispatchAuditStage",
+    "persistAuditRecord"
+  ],
+  "storeNamespaces": [
+    "audit",
+    "audit.journal"
+  ]
+}

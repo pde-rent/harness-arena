@@ -1,0 +1,8 @@
+{
+  "id": "research-audit-handler",
+  "category": "research",
+  "fixture": "pipeline",
+  "difficulty": "medium",
+  "timeoutSeconds": 600,
+  "description": "Trace which function ultimately handles an audit event through a multi-hop dispatch chain and report the chain plus the store namespaces it writes, as answer.json."
+}

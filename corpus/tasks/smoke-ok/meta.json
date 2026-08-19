@@ -1,0 +1,7 @@
+{
+  "id": "smoke-ok",
+  "category": "smoke",
+  "difficulty": "trivial",
+  "timeoutSeconds": 300,
+  "description": "One-word smoke prompt used to measure fixed harness overhead (system-prompt tokens) and to prove the proxy pin + container wiring work. No files, no grading beyond the workdir existing."
+}

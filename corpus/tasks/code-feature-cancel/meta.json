@@ -1,0 +1,8 @@
+{
+  "id": "code-feature-cancel",
+  "category": "coding",
+  "fixture": "taskq",
+  "difficulty": "medium",
+  "timeoutSeconds": 1200,
+  "description": "The task queue ships a \"cancelled\" TaskState that no code path ever produces; implement Scheduler.cancel(id) to spec, including the transitive cascade onto dependents, the no-op states, the drain/ready-order guarantees, snapshot round-tripping and silence on the plugin hooks."
+}

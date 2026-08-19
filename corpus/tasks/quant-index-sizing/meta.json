@@ -1,0 +1,8 @@
+{
+  "id": "quant-index-sizing",
+  "category": "quantitative",
+  "fixture": "geosvc",
+  "difficulty": "hard",
+  "timeoutSeconds": 1200,
+  "description": "An eight-step dependent capacity derivation over a large read-only Go service: tiles covering the default region at the default zoom, features indexed, packed R-tree leaf and total node counts from the branching-factor constant, resident index bytes from documented per-feature and per-node sizes, tile-cache capacity from the configured byte budget, and the hit rate and backing-store read rate implied by a committed sample workload, as answer.json."
+}

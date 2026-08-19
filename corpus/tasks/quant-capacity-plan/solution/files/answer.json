@@ -1,0 +1,22 @@
+{
+  "envConfigPath": "conf/prod.toml",
+  "envOverriddenFields": [
+    "compression_ratio",
+    "batch_max_events",
+    "retention_days",
+    "replication_factor"
+  ],
+  "peakEventsPerSecond": 17700,
+  "avgPayloadBytes": 1400,
+  "compressedPeakBytesPerSecond": 7080000,
+  "eventsPerBatch": 640,
+  "batchesPerSecond": 28,
+  "shardsRequired": 7,
+  "bindingShardLimitField": "shard_max_mib_per_second",
+  "retentionWindowDays": 31,
+  "hotTierBytes": 33480000000000,
+  "hotTierGib": 31181,
+  "monthlyCostUsd": 868.08,
+  "maxRetentionDaysWithinBudget": 20,
+  "notes": "ACTIVE_ENVIRONMENT='prod' in capacity/config.py selects conf/prod.toml, which sets compression_ratio=3.5, batch_max_events=1000, retention_days=30, replication_factor=3; the other conf/*.toml files are inert. Only fleet='prod' rows in data/ingest_rates.csv are billable (loadtest out-peaks it). Peak prod hour 63720000 events / 3600 = 17700/s. Prod day totals 900000000 events and 1259280000000 payload bytes -> 1399.2 -> ceil 1400 B/event. Compressed: 17700*1400/3.5 = 7080000 B/s, i.e. 400 B per compressed event. Batch closes at >= 250 KiB = 256000 B, so 256000/400 = exactly 640 events (the event ceiling 1000 does not bind; the default 500 would have). ceil(17700/640) = 28 batches/s. Shards: ceil(17700/4000)=5 by events, ceil(7080000/1048576)=7 by bytes (1 MiB/s, not 1 MB/s) -> 7 shards, bound by shard_max_mib_per_second. Retention window = retention_days + 1 = 31 resident days. Daily compressed = 900000000*1400/3.5 = 360000000000 B; hot tier = 360000000000*31*3 = 33480000000000 B = ceil(/1073741824) = 31181 GiB. Billable = 31181-1000 free = 30181 GiB -> 10000*0.021 + 20181*0.017 = 210.000 + 343.077 = 553.077, plus 7*45.00 = 315.00 -> 868.08. Budget 700.00: retention_days=20 gives window 21, 22680000000000 B, 21123 GiB, 20123 billable -> 210 + 172.091 + 315 = 697.09 (within); 21 days gives 714.19 (over)."
+}

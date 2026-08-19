@@ -1,0 +1,10 @@
+{
+  "interfaceName": "FeatureCache",
+  "recommended": "LRUCache",
+  "rejected": "SegmentedCache",
+  "defectFile": "index/cache_seg.go",
+  "defectSymbol": "evictProbation",
+  "defectKind": "unbounded-growth",
+  "defectTriggerKeys": 129,
+  "callersToUpdate": ["index/factory.go", "service/service.go"]
+}
