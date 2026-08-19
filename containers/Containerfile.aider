@@ -1,0 +1,46 @@
+# aider harness image for the coding-agent benchmark.
+#
+#   podman build -t bench/aider:pinned -f containers/Containerfile.aider containers
+#
+# CLI path (runner invokes this exact path): /opt/harness/bin/aider
+# Pinned CLI version: aider-chat 0.86.2
+#
+# Python, so it does not use the node base. Ran natively until now: a smoke run was discarded
+# because spend reached the account without passing the proxy, which is exactly the failure a
+# native run cannot rule out -- the host had other credentials and config within reach.
+
+# python:3.12-slim (Debian bookworm) pinned by digest
+FROM docker.io/library/python@sha256:9c1d9ed7593f2552a4ea47362ec0d2ddf5923458a53d0c8e30edf8b398c94a31 AS build
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
+
+# aider builds a few native wheels; the toolchain stays in this stage and is discarded.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential \
+ && rm -rf /var/lib/apt/lists/* \
+ && python -m venv /opt/harness \
+ && /opt/harness/bin/pip install aider-chat==0.86.2
+
+# python:3.12-slim (Debian bookworm) pinned by digest
+FROM docker.io/library/python@sha256:9c1d9ed7593f2552a4ea47362ec0d2ddf5923458a53d0c8e30edf8b398c94a31
+
+# aider shells out to git even with --no-git; ripgrep for search.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ripgrep ca-certificates \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+COPY --from=build /opt/harness /opt/harness
+
+# Empty, writable, in-image HOME. Never a host home.
+RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
+
+ENV HOME=/home/bench \
+    PATH=/opt/harness/bin:$PATH \
+    AIDER_ANALYTICS=false \
+    DO_NOT_TRACK=1
+
+WORKDIR /work
+
+ENTRYPOINT []
+CMD ["/opt/harness/bin/aider", "--version"]
