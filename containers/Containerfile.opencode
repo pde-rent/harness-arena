@@ -44,22 +44,15 @@ RUN mkdir -p /tmp/warm && cd /tmp/warm \
       @opencode-ai/plugin@1.18.18 @ai-sdk/openai-compatible \
  && rm -rf /tmp/warm /root/.npm
 
-# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
-FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+# Shared base: node:22-slim pinned by digest, plus git/ripgrep/ca-certificates and an empty HOME.
+# See Containerfile.base for why the harnesses share a base but not an image.
+FROM localhost/bench/base:pinned
 
-# opencode shells out to git (snapshots / diffs). ripgrep is vendored inside the
-# opencode binary, so it is not installed. Lean: no recommends, no apt lists.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates \
- && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 COPY --from=build /opt/harness /opt/harness
 
-# Empty, writable, in-image HOME. Never a host home. No opencode/claude config inside.
-RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
 
-ENV HOME=/home/bench \
-    PATH=/opt/harness/bin:$PATH \
+ENV PATH=/opt/harness/bin:$PATH \
     npm_config_cache=/opt/harness/npm-cache \
     npm_config_prefer_offline=true \
     NPM_CONFIG_UPDATE_NOTIFIER=false \

@@ -145,3 +145,26 @@ planted marker never appears in the prompt. Repo-instruction discovery stays off
   handles that shape.
 - `aider`, `cline` and `pi` appeared in `harnesses.json` after this work started and have
   no images yet; they keep running natively until Containerfiles are added.
+
+## Image layout: shared base, separate images
+
+`Containerfile.base` builds `bench/base:pinned` — node:22-slim pinned by digest, plus git, ripgrep
+and ca-certificates, and an empty `HOME=/home/bench`. The node-based harness images build FROM it:
+claude, opencode, prime-agent-upstream, oh-my-pi. All four share all seven of its layers, so the
+OS and runtime are stored once rather than four times. `build.sh` builds it first.
+
+codex and cursor are debian-based and prime-agent-fork is bun-based, so they keep their own bases;
+there is nothing to share without changing what they run on.
+
+### Why not one image containing every harness
+
+It would share a PATH, a global `node_modules`, an npm cache and a HOME between harnesses that all
+auto-discover configuration from exactly those locations. `spec/fairness.md` records that failure
+happening once already: opencode was silently loading the developer's `~/.claude/skills`,
+`~/.agents/skills` and an installed plugin into every run. Co-installing the harnesses reproduces
+that inside the container, where it is harder to notice, and it would bias the comparison the
+images exist to make fair. It would also couple their dependency resolution, so pinning one CLI
+could move another's tree.
+
+The base carries only the OS, the runtime and the three binaries every harness shells out to.
+Nothing in it is harness-specific, so nothing in it can leak between them.

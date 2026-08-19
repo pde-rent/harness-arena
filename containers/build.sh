@@ -30,9 +30,19 @@ extra_args_for() {
 	esac
 }
 
+# The node-based images build FROM localhost/bench/base:pinned, so the base is built first and is
+# not itself a harness. See Containerfile.base for why they share a base but not one image.
+BASE_IMAGE=base
 ALL=(prime-agent-fork prime-agent-upstream claude opencode hermes codex cursor oh-my-pi)
 WANTED=("${@+$@}")
 if [ ${#WANTED[@]} -eq 0 ]; then WANTED=("${ALL[@]}"); fi
+
+# Always current before anything that inherits it; cheap when its layers are cached.
+echo "== build $BASE_IMAGE"
+if ! podman build -t "bench/$BASE_IMAGE:pinned" -f "$HERE/Containerfile.$BASE_IMAGE" "$HERE"; then
+	echo "!! base image failed; the node-based harnesses cannot build" >&2
+	exit 1
+fi
 
 built=()
 failed=()

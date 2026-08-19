@@ -33,21 +33,15 @@ RUN npm install -g --prefix /opt/harness @earendil-works/pi-coding-agent@0.84.2 
  && mv /opt/build/lib/node_modules/oh-my-pi /opt/harness/oh-my-pi \
  && rm -rf /opt/build /root/.npm /tmp/*
 
-# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
-FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+# Shared base: node:22-slim pinned by digest, plus git/ripgrep/ca-certificates and an empty HOME.
+# See Containerfile.base for why the harnesses share a base but not an image.
+FROM localhost/bench/base:pinned
 
-# pi shells out to git and ripgrep. Lean: no recommends, no apt lists.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends git ripgrep ca-certificates \
- && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 COPY --from=build /opt/harness /opt/harness
 
-# Empty, writable, in-image HOME. Never a host home.
-RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
 
-ENV HOME=/home/bench \
-    PATH=/opt/harness/bin:$PATH \
+ENV PATH=/opt/harness/bin:$PATH \
     NPM_CONFIG_UPDATE_NOTIFIER=false \
     DO_NOT_TRACK=1
 

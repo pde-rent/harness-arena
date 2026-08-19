@@ -1,0 +1,39 @@
+# Shared runtime base for the node-based harness images.
+#
+# Build first; the harness images are built FROM it:
+#   podman build -t bench/base:pinned -f containers/Containerfile.base containers
+#
+# WHY A SHARED BASE AND NOT ONE IMAGE FOR EVERY HARNESS
+#
+# One image holding every CLI would share a PATH, a global node_modules, an npm cache and a HOME
+# between harnesses that all auto-discover configuration from exactly those places. That is the
+# failure `spec/fairness.md` already records once: opencode was silently loading the developer's
+# `~/.claude/skills`, `~/.agents/skills` and an installed plugin into every run. Co-installing the
+# harnesses would reproduce that inside the container, where it is harder to notice and would bias
+# the comparison it exists to make. It would also couple their dependency resolution, so pinning
+# one CLI could move another's tree.
+#
+# So each harness keeps its own image and its own empty HOME, and only genuinely neutral tooling is
+# shared: the OS, the runtime, and the three packages every harness shells out to. Nothing here is
+# harness-specific, so nothing here can leak between them.
+
+# node:22-slim (Debian bookworm, Node.js 22) pinned by digest
+FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+
+# git: snapshots and diffs. ripgrep: search, and several harnesses shell out to it rather than
+# vendoring one. ca-certificates: TLS to the pinning proxy.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ripgrep ca-certificates \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+# Empty, writable, in-image HOME. Never a host home. Each harness image inherits it and puts its
+# own state elsewhere, so a run starts from the same blank slate whichever harness it is.
+RUN mkdir -p /home/bench /work && chmod 777 /home/bench /work
+
+ENV HOME=/home/bench \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false \
+    DO_NOT_TRACK=1
+
+WORKDIR /work

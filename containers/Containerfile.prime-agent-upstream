@@ -44,10 +44,9 @@ RUN set -eux; \
     chmod -R a+rwX /home/bench /opt/harness
 
 # ---------- final ----------
-FROM docker.io/library/node@sha256:253da19867dd03e2f817f433d7782adefd2a2bac8729fcd4ebc6770665167a24
+FROM localhost/bench/base:pinned
 
-ENV HOME=/home/bench \
-    PRIME_AGENT_TELEMETRY=0 \
+ENV PRIME_AGENT_TELEMETRY=0 \
     DO_NOT_TRACK=1 \
     PATH=/opt/harness/node_modules/.bin:/home/bench/.local/bin:$PATH
 
