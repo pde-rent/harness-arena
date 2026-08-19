@@ -6,7 +6,7 @@ tokens-to-goal and time-to-goal.
 ```sh
 source ~/.prime-bench.env
 bun run run.ts --dry-run                       # setup + graders only, no model calls
-bun run run.ts --harnesses claude,prime-agent-fork --attempts 3
+bun run run.ts --harnesses claude,optimus-prime --attempts 3
 bun run report.ts ../results/<stamp>/results.ndjson --baseline claude
 ```
 

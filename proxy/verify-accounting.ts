@@ -19,7 +19,7 @@ import { join } from "node:path";
 const BENCH = join(import.meta.dir, "..");
 const PROMPT = arg("prompt") ?? "reply with exactly: ok";
 const OUT = arg("out") ?? join(BENCH, "results", "verify-accounting");
-const WANT = (arg("harnesses") ?? "prime-agent-fork,claude,codex,opencode").split(",");
+const WANT = (arg("harnesses") ?? "optimus-prime,claude,codex,opencode").split(",");
 const HOST_FROM_CONTAINER = process.env.BENCH_CONTAINER_HOST ?? "host.containers.internal";
 const MODEL = process.env.BENCH_MODEL ?? "deepseek/deepseek-v4-flash-0731";
 

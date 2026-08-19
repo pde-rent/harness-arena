@@ -9,14 +9,14 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FORK_REPO="${FORK_REPO:-/private/tmp/prime-agent}"
+FORK_REPO="${FORK_REPO:-$HOME/Work/optimus-prime}"
 
 # harness id -> build context (the Containerfile is always Containerfile.<id>).
 # Every image downloads its harness, so the context is empty for all but the fork,
 # which COPYs the prebuilt bundle out of the read-only local repo.
 context_for() {
 	case "$1" in
-	prime-agent-fork) echo "$FORK_REPO/packages/coding-agent" ;;
+	optimus-prime) echo "$FORK_REPO/packages/coding-agent" ;;
 	*) echo "$HERE" ;;
 	esac
 }
@@ -25,7 +25,7 @@ context_for() {
 # keeps the fork's context at ~14M instead of tarring node_modules).
 extra_args_for() {
 	case "$1" in
-	prime-agent-fork) echo "--ignorefile $HERE/ignorefile.prime-agent-fork" ;;
+	optimus-prime) echo "--ignorefile $HERE/ignorefile.optimus-prime" ;;
 	*) echo "" ;;
 	esac
 }
@@ -33,7 +33,7 @@ extra_args_for() {
 # The node-based images build FROM localhost/bench/base:pinned, so the base is built first and is
 # not itself a harness. See Containerfile.base for why they share a base but not one image.
 BASE_IMAGE=base
-ALL=(prime-agent-fork prime-agent-upstream claude opencode hermes codex cursor oh-my-pi)
+ALL=(optimus-prime prime-agent-upstream claude opencode hermes codex cursor pi oh-my-pi)
 WANTED=("${@+$@}")
 if [ ${#WANTED[@]} -eq 0 ]; then WANTED=("${ALL[@]}"); fi
 

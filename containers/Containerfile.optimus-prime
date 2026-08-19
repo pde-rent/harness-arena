@@ -1,25 +1,25 @@
-# Containerfile.prime-agent-fork
+# Containerfile.optimus-prime
 #
-# Harness: prime-agent-fork -- local fork of the pi coding agent
+# Harness: optimus-prime -- local fork of the pi coding agent
 #   @earendil-works/pi-coding-agent 0.7.2, git 3701f4e00e0d91cd182f3b86d2ee426e63717b0a
 #
 # Context is the package root (the CLI resolves skills/theme/export-html relative
-# to package.json), narrowed to ~14M by the sibling ignorefile.prime-agent-fork allow-list so
+# to package.json), narrowed to ~14M by the sibling ignorefile.optimus-prime allow-list so
 # node_modules/src/docs/*.map are never tarred. The fork repo is READ-ONLY:
 # nothing here installs or builds inside it, we only COPY prebuilt output.
 #
 # BUILD:
 #   podman build \
-#     -f /private/tmp/bench-harnesses/containers/Containerfile.prime-agent-fork \
-#     --ignorefile /private/tmp/bench-harnesses/containers/ignorefile.prime-agent-fork \
-#     -t bench/prime-agent-fork:pinned \
-#     /private/tmp/prime-agent/packages/coding-agent
+#     -f /private/tmp/bench-harnesses/containers/Containerfile.optimus-prime \
+#     --ignorefile /private/tmp/bench-harnesses/containers/ignorefile.optimus-prime \
+#     -t bench/optimus-prime:pinned \
+#     $HOME/Work/optimus-prime/packages/coding-agent
 #
 # RUN (runner invokes):
 #   podman run --rm -v <workdir>:/work:rw -w /work \
-#     -e PRIME_AGENT_CODING_AGENT_DIR=/work/.bench-agentdir \
-#     -e PRIME_AGENT_TELEMETRY=0 -e DO_NOT_TRACK=1 \
-#     bench/prime-agent-fork:pinned \
+#     -e OPTIMUS_CODING_AGENT_DIR=/work/.bench-agentdir \
+#     -e DO_NOT_TRACK=1 \
+#     bench/optimus-prime:pinned \
 #     bun /opt/harness/bundle/cli.js -p "<prompt>" --mode json \
 #       --provider bench --model <model> -nc --no-session \
 #       --daemon-socket /work/.bench-daemon.sock
@@ -44,7 +44,6 @@ RUN apt-get update \
 ENV PATH=/opt/venv/bin:$PATH \
     HOME=/home/bench \
     PI_PACKAGE_DIR=/opt/harness \
-    PRIME_AGENT_TELEMETRY=0 \
     DO_NOT_TRACK=1 \
     XDG_CONFIG_HOME=/home/bench/.config \
     XDG_CACHE_HOME=/home/bench/.cache \

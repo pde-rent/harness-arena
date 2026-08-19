@@ -20,21 +20,28 @@ itself.
 
 ## Harnesses under test
 
-| harness | fixed context cost, one-word task |
+| harness | version under test |
 |---|---|
-| aider | 561 |
-| prime-agent (fork) | 4,186 |
-| prime-agent (upstream) | 4,476 |
-| cline | 5,282 |
-| opencode | 6,172 |
-| hermes | 13,352 |
-| Claude Code | 27,344 |
-| codex | pending |
-| pi | pending |
-| gemini-cli | pending |
+| `optimus-prime` | 1.0.0 (this fork) |
+| `prime-agent-upstream` | 0.7.3 |
+| `pi` | 0.84.2 |
+| `oh-my-pi` | pi 0.84.2 + extension 0.2.0 |
+| `claude` | 2.1.234 |
+| `opencode` | 1.18.18 |
+| `codex` | 0.147.0 |
+| `hermes` | git @ `~/.hermes/hermes-agent` |
+| `aider` | pending |
+| `cline` | pending |
+| `cursor` | not runnable unattended |
+| `gemini-cli` | pending |
 
-Fixed context cost = prompt tokens billed for a task whose correct answer is one word. It is
-the floor every real task pays on every turn, and it is measured at the wire, not self-reported.
+Names are the registry ids from `runner/harnesses.json` — the same strings `--harnesses` takes.
+
+`pi` and `oh-my-pi` are a control/treatment pair: the same pinned pi, with and without the
+extension that replaces its system prompt, so the difference between them is the extension.
+
+Every version is pinned in `containers/`, and a harness is only listed once it runs unattended
+against the proxy.
 
 ## Ground rules
 

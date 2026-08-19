@@ -28,7 +28,7 @@ future machine behaves differently.
 
 | Harness | Base (digest-pinned) | Harness version pin | Size |
 |---|---|---|---|
-| `prime-agent-fork` | `oven/bun@sha256:6068a9d4…5ee2` (bun 1.3.14, Debian 13) | local repo `/private/tmp/prime-agent` @ `3701f4e`, `@earendil-works/pi-coding-agent` 0.7.2 — prebuilt `dist/` COPYed in | 399 MB |
+| `optimus-prime` | `oven/bun@sha256:6068a9d4…5ee2` (bun 1.3.14, Debian 13) | local repo `/private/tmp/prime-agent` @ `3701f4e`, `@earendil-works/pi-coding-agent` 0.7.2 — prebuilt `dist/` COPYed in | 399 MB |
 | `prime-agent-upstream` | `node@sha256:253da198…7a24` (node:22-slim, bookworm) | prime-agent **0.7.3** release tarball, sha256 `2a188738…2784` checked in-build | 959 MB |
 | `claude` | `node@sha256:253da198…7a24` | `@anthropic-ai/claude-code@`**2.1.234** | 682 MB |
 | `opencode` | `node@sha256:253da198…7a24` | `opencode-ai@`**1.18.18** | 632 MB |
@@ -40,7 +40,7 @@ In-image paths the runner invokes (recorded as `container.argvRewrite` in
 
 | Harness | entry | `HOME` |
 |---|---|---|
-| `prime-agent-fork` | `bun /opt/harness/bundle/cli.js` | `/home/bench` |
+| `optimus-prime` | `bun /opt/harness/bundle/cli.js` | `/home/bench` |
 | `prime-agent-upstream` | `/opt/harness/node_modules/.bin/prime-agent` | `/home/bench` |
 | `claude` | `/opt/harness/bin/claude` | `/home/bench` |
 | `opencode` | `/opt/harness/bin/opencode` | `/home/bench` |
@@ -62,8 +62,8 @@ podman system connection default bench-vm     # never use podman-machine-default
 ```
 
 `build.sh` picks the build context per harness. All images download their harness and
-build from an empty context except `prime-agent-fork`, whose context is the fork's package
-dir narrowed by `ignorefile.prime-agent-fork` (allow-list, ~14 MB instead of the whole
+build from an empty context except `optimus-prime`, whose context is the fork's package
+dir narrowed by `ignorefile.optimus-prime` (allow-list, ~14 MB instead of the whole
 repo with `node_modules`). **The fork repo is only ever read** — nothing installs or builds
 inside it; the image copies the already-built `dist/`. If `dist/` is stale, run
 `bun run build` in the fork on the host *before* building the image.
@@ -103,7 +103,7 @@ All five: exit 0, one `/chat/completions` (or `/messages`) row with
 
 | Harness | native promptTokens | containerized | Δ | cause |
 |---|---|---|---|---|
-| `prime-agent-fork` | 4,186 (re-measured via `--native`: 4,205) | **3,847** | −8.1% | native loaded 3 user skills from `~/.agents/skills` (`coord`, `solidity-audit`, `swarm`) |
+| `optimus-prime` | 4,186 (re-measured via `--native`: 4,205) | **3,847** | −8.1% | native loaded 3 user skills from `~/.agents/skills` (`coord`, `solidity-audit`, `swarm`) |
 | `prime-agent-upstream` | 4,476 | **4,085** | −8.7% | same three user skills |
 | `opencode` | 6,172 | **7,329** | +18.7% | native loaded `~/.config/opencode/AGENTS.md` **and** a user "orchestrator" agent that *replaces* the system prompt and drops the `edit`/`write` tools (8 tools vs 10 stock) |
 | `hermes` | 13,352 | **12,233** | −8.4% | native injected "Project Context" from the user's `.cursor/rules/*.mdc`, plus a `browser_exec` tool from the host playwright install |
@@ -114,11 +114,11 @@ returns 500 — **no model calls, no cost** — and diffing the system prompt na
 container. In every case the container prompt is the *stock* harness prompt and the host
 prompt carries user state. The container numbers are the clean baselines; the native
 figures are contaminated, which is exactly what containerization was meant to remove.
-The `--native` fallback was re-run for `prime-agent-fork` and reproduced the documented
+The `--native` fallback was re-run for `optimus-prime` and reproduced the documented
 host figure (4,205 vs 4,186), so the deltas are contamination, not measurement noise.
 
 `AGENTS.md` planted in the workdir → byte-identical request body for all five harnesses
-(`prime-agent-fork`, `prime-agent-upstream`, `claude`, `opencode`, `hermes`), and the
+(`optimus-prime`, `prime-agent-upstream`, `claude`, `opencode`, `hermes`), and the
 planted marker never appears in the prompt. Repo-instruction discovery stays off.
 
 ## Notes / trade-offs
@@ -133,7 +133,7 @@ planted marker never appears in the prompt. Repo-instruction discovery stays off
 - `hermes` omits browser/computer-use/whisper extras — unreachable in headless `-z` runs
   and huge. Consequence: the container has 17 tools where the host has 18 (`browser_exec`).
   That is a deliberate, reported capability difference, not an accident.
-- `prime-agent-fork` ships python3 + ipython (~150 MB) for model-authored Python via the
+- `optimus-prime` ships python3 + ipython (~150 MB) for model-authored Python via the
   shell; the harness's own `ipython` tool turned out to be a Bun JS/TS REPL, so that layer
   can be dropped if size matters more.
 - `claude` is 682 MB mostly because the CLI itself is a 311 MB native binary.
@@ -153,7 +153,7 @@ and ca-certificates, and an empty `HOME=/home/bench`. The node-based harness ima
 claude, opencode, prime-agent-upstream, oh-my-pi. All four share all seven of its layers, so the
 OS and runtime are stored once rather than four times. `build.sh` builds it first.
 
-codex and cursor are debian-based and prime-agent-fork is bun-based, so they keep their own bases;
+codex and cursor are debian-based and optimus-prime is bun-based, so they keep their own bases;
 there is nothing to share without changing what they run on.
 
 ### Why not one image containing every harness

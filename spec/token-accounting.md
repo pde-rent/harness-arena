@@ -76,7 +76,7 @@ Measured, that puts us consistently *below* the provider on every shape:
 | harness | shape | ours | provider prompt | ours ÷ theirs |
 |---|---|---|---|---|
 | codex | `/responses` | 8,620 | 9,655 | 0.893 |
-| prime-agent-fork | `/chat/completions` | 3,623 | 3,847 | 0.942 |
+| optimus-prime | `/chat/completions` | 3,623 | 3,847 | 0.942 |
 | opencode | `/chat/completions` | 6,946 | 7,329 | 0.948 |
 | claude | `/messages` | 18,767 | 19,269 | 0.974 |
 
@@ -179,7 +179,7 @@ its pinned container, each behind its own metering proxy. Reproduce with
 
 | harness | shape | system | toolSchema | history | toolResult | currentTurn | **sum** | **context** | delta |
 |---|---|---|---|---|---|---|---|---|---|
-| prime-agent-fork | `/chat/completions` | 3,502 | 116 | 0 | 0 | 5 | 3,623 | 3,623 | 0 |
+| optimus-prime | `/chat/completions` | 3,502 | 116 | 0 | 0 | 5 | 3,623 | 3,623 | 0 |
 | opencode | `/chat/completions` | 2,068 | 4,871 | 0 | 0 | 7 | 6,946 | 6,946 | 0 |
 | claude | `/messages` | 1,405 | 15,844 | 1,438 | 0 | 80 | 18,767 | 18,767 | 0 |
 | codex | `/responses` | 5,185 | 3,331 | 99 | 0 | 5 | 8,620 | 8,620 | 0 |
@@ -188,7 +188,7 @@ Five-fold spread in fixed context cost, three different request shapes, one toke
 reconciling exactly. The provider-reported column for the same four calls spans 69 … 19,269 for
 contexts that differ by 5x — it is not measuring the same quantity twice.
 
-The decomposition is also where the answer lives: prime-agent-fork's 3,623 is 97% system prompt
+The decomposition is also where the answer lives: optimus-prime's 3,623 is 97% system prompt
 with one tool, while claude's 18,767 is 84% **tool schemas** across 24 tools. Those are different
 engineering decisions, and the single number hid which was which.
 
@@ -239,7 +239,7 @@ Tokenization requires no network at measurement time. Proof, reproducible:
 
 ```sh
 podman run --rm --network=none -v $PWD:/work:ro -w /work \
-  --entrypoint bun bench/prime-agent-fork:pinned run /work/verify-offline.ts
+  --entrypoint bun bench/optimus-prime:pinned run /work/verify-offline.ts
 ```
 
 Runs in a container with **no network device at all**, with `globalThis.fetch` additionally
