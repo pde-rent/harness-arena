@@ -505,6 +505,13 @@ console.log(
 );
 console.log(`out:       ${outDir}${dryRun ? "  (dry run — no model calls)" : ""}\n`);
 
+/** Whether a run failed because the container runtime went away, rather than because of the agent. */
+function containerRuntimeDown(result: RunResult): boolean {
+	if (!result.stderrPath || !existsSync(result.stderrPath)) return false;
+	const tail = readFileSync(result.stderrPath, "utf-8").slice(-4000);
+	return /unable to connect to Podman socket|Cannot connect to Podman|Cannot connect to the Docker daemon/.test(tail);
+}
+
 const resultsPath = join(outDir, "results.ndjson");
 
 /**
@@ -532,6 +539,18 @@ for (const task of tasks) {
 			process.stdout.write(`${task.id} · ${harness.id} · #${attempt} … `);
 			try {
 				const result = await runOne(harness, task, attempt);
+				// A dead container runtime is not a harness failure. Without this the sweep records
+				// every remaining cell as harness_error at ~3s each -- 70 fabricated failures in one
+				// run here, indistinguishable in the results from a harness that genuinely could not
+				// do the task, and skipped on resume because they look like completed measurements.
+				if (result.outcome === "harness_error" && containerRuntimeDown(result)) {
+					console.log("ERROR · container runtime unreachable");
+					console.error(
+						"\nThe container runtime stopped responding. Aborting rather than recording the rest of\n" +
+							"the matrix as failures. Restart it and rerun with the same --out to resume.",
+					);
+					process.exit(1);
+				}
 				results.push(result);
 				await Bun.write(resultsPath, `${results.map((r) => JSON.stringify(r)).join("\n")}\n`);
 				console.log(
