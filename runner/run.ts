@@ -411,8 +411,13 @@ async function runOne(harness: HarnessSpec, task: TaskMeta, attempt: number): Pr
 		spendBefore !== null && spendAfter !== null
 			? Math.max(0, spendAfter - spendBefore - usage.costUsd)
 			: 0;
-	// Tolerance covers rounding in the provider's own accounting, not a missed request.
-	const UNMETERED_TOLERANCE_USD = 2e-4;
+	// Tolerance covers rounding in the provider's own accounting, not a missed request, so it has to
+	// scale the way rounding does. A flat floor discarded long runs for a rounding-sized gap: an
+	// opencode run costing ~$0.05 was refused over $0.000237, while the same absolute figure is
+	// genuinely suspicious on a run costing a tenth of a cent. A missed request is a whole call and
+	// clears a few percent easily; provider-side rounding does not.
+	const UNMETERED_FLOOR_USD = 2e-4;
+	const UNMETERED_TOLERANCE_USD = Math.max(UNMETERED_FLOOR_USD, usage.costUsd * 0.02);
 	const escaped = unmetered > UNMETERED_TOLERANCE_USD;
 	// Only a violation when a pin was asked for. With `BENCH_PROVIDER_ONLY=""` the routing is the
 	// provider's to choose, so a run cannot be wrong for being served elsewhere -- but the provider
