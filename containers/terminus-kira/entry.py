@@ -16,7 +16,8 @@ through `exec` exactly as it would to a remote docker environment.
 
   entry.py --model <litellm-model> --api-base <url> <prompt>
 
-Exits non-zero if the agent raises.
+Exits 0 only when the agent confirmed `task_complete`; non-zero if it raised (1)
+or stopped without completing -- dead session or turn budget (2).
 """
 
 import argparse
@@ -111,7 +112,28 @@ class LocalEnvironment(BaseEnvironment):
         shutil.copytree(source_dir, target_dir, dirs_exist_ok=True)
 
 
-async def run(model: str, api_base: str, prompt: str) -> None:
+def confirmed_complete(agent: TerminusKira) -> bool:
+    """Did the agent finish on its own double-confirmed `task_complete`?
+
+    `_run_agent_loop` returns an episode count on every exit path -- completion,
+    dead tmux session, and max_turns exhaustion alike -- so its return value cannot
+    say which one happened. The trajectory can: completion is the only path that
+    records `mark_task_complete` on two consecutive agent steps (KIRA asks once,
+    sends the confirmation checklist, and stops only when the second call arrives).
+    Read-only; the agent loop is untouched.
+    """
+    marks = [
+        any(call.function_name == "mark_task_complete" for call in (step.tool_calls or []))
+        for step in agent._trajectory_steps
+        if step.source == "agent"
+    ]
+    return len(marks) >= 2 and marks[-1] and marks[-2]
+
+
+MAX_EPISODES = 50
+
+
+async def run(model: str, api_base: str, prompt: str) -> bool:
     env = LocalEnvironment()
     agent = TerminusKira(
         logs_dir=Path("/tmp/terminus-kira-logs"),
@@ -120,6 +142,19 @@ async def run(model: str, api_base: str, prompt: str) -> None:
         # Recording is a harbor bench artefact, not agent behaviour, and it is the
         # only thing that needs a trial layout.
         record_terminal_session=False,
+        # Bounded, deviating from upstream's effectively-unlimited 1,000,000 default.
+        #
+        # KIRA's double-confirmation handshake can livelock: the model calls task_complete, gets a
+        # QA checklist, answers it with a command, which resets the pending completion, and round it
+        # goes -- 940,000 tokens observed on "reply with exactly: ok" before the task timeout stopped
+        # it. The timeout already bounds wall-clock; this bounds the spend, and turns a livelock into
+        # an early, honestly-labelled non-zero exit instead of an expensive timeout.
+        #
+        # Applied to BOTH Terminus harnesses at the same value. Bounding one half of a matched pair
+        # would make their difference partly an artefact of the limit. Recorded in both entries'
+        # notes as a deviation from stock: a task that genuinely needs more than this is truncated,
+        # which biases against these two rather than for them.
+        max_episodes=MAX_EPISODES,
     )
     await agent.setup(env)
     context = AgentContext()
@@ -131,6 +166,7 @@ async def run(model: str, api_base: str, prompt: str) -> None:
             f"output_tokens={context.n_output_tokens} metadata={context.metadata}",
             file=sys.stderr,
         )
+    return confirmed_complete(agent)
 
 
 def main() -> int:
@@ -139,8 +175,12 @@ def main() -> int:
     ap.add_argument("--api-base", required=True)
     ap.add_argument("prompt")
     args = ap.parse_args()
-    asyncio.run(run(args.model, args.api_base, args.prompt))
-    return 0
+    if asyncio.run(run(args.model, args.api_base, args.prompt)):
+        return 0
+    # The loop returned without confirming completion: the session died or the turn
+    # budget ran out. Exiting 0 there would report giving up as success.
+    print("terminus-kira: agent stopped without confirming task_complete", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":

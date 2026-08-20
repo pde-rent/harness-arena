@@ -34,6 +34,9 @@ ExecResult = namedtuple("ExecResult", "exit_code output")
 _LOG_PATH = Path("/tmp/bench-terminus2.log")
 
 
+MAX_EPISODES = 50
+
+
 class _LocalContainer:
     """Stands in for docker's Container: runs the command in *this* container."""
 
@@ -87,7 +90,19 @@ def main() -> int:
     session = LocalTmuxSession("bench")
     session.start()
     try:
-        agent = Terminus2(model_name=args.model, api_base=args.api_base)
+        # Bounded, deviating from upstream's effectively-unlimited 1,000,000 default.
+        #
+        # The KIRA sibling's double-confirmation handshake can livelock -- 940,000 tokens observed on
+        # "reply with exactly: ok" before the task timeout stopped it. The timeout already bounds
+        # wall-clock; this bounds the spend, and turns a livelock into an early, honestly-labelled
+        # non-zero exit instead of an expensive timeout.
+        #
+        # Applied to BOTH Terminus harnesses at the same value: bounding one half of a matched pair
+        # would make their difference partly an artefact of the limit. A task that genuinely needs more
+        # than this is truncated, which biases against these two rather than for them.
+        agent = Terminus2(
+            model_name=args.model, api_base=args.api_base, max_episodes=MAX_EPISODES
+        )
         result = agent.perform_task(instruction=args.prompt, session=session)
     finally:
         session.stop()
