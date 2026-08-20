@@ -116,6 +116,34 @@ if (baselineId && harnesses.includes(baselineId)) {
 	);
 }
 
+// Provider mix, always. When the run was pinned this is one line confirming the pin held; when it
+// was not, it is the caveat the numbers cannot be read without -- the same model differs in
+// quantisation and latency between providers, so a harness that drew a different one is not
+// comparable on tokens or time with a harness that did not.
+const providerCounts = new Map<string, Map<string, number>>();
+for (const r of results) {
+	for (const p of r.providersServed ?? []) {
+		const byHarness = providerCounts.get(r.harness) ?? new Map<string, number>();
+		byHarness.set(p, (byHarness.get(p) ?? 0) + 1);
+		providerCounts.set(r.harness, byHarness);
+	}
+}
+const allProviders = new Set([...providerCounts.values()].flatMap((m) => [...m.keys()]));
+if (allProviders.size > 0) {
+	console.log(`\n## Providers served\n`);
+	for (const [harness, mix] of [...providerCounts].sort()) {
+		const parts = [...mix].sort().map(([p, n]) => `${p} x${n}`);
+		console.log(`  ${harness}: ${parts.join(", ")}`);
+	}
+	if (allProviders.size > 1) {
+		console.log(
+			"\n  More than one provider served this run. Token and latency comparisons across\n" +
+				"  harnesses that drew different providers include the provider's contribution, not\n" +
+				"  the harness's alone.",
+		);
+	}
+}
+
 const discarded = results.filter((r) => r.outcome === "discarded_unpinned");
 const zeroToken = results.filter((r) => r.outcome !== "discarded_unpinned" && r.requests === 0);
 if (discarded.length > 0) {

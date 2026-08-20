@@ -52,9 +52,14 @@ against the proxy.
 
 ## Ground rules
 
-1. **Same model, same provider.** `deepseek/deepseek-v4-flash-0731` pinned to `deepinfra/fp8`.
-   Pinning only works via the request body (`provider.only`), so the proxy injects it; a run
-   served by any other provider is discarded, not reported.
+1. **Same model; same provider when pinned.** `deepseek/deepseek-v4-flash-0731`. Pinning works
+   only through the request body (`provider.only`), so the proxy injects it and a run served by
+   another provider is discarded. The pin is set by `BENCH_PROVIDER_ONLY`, and `""` routes by
+   OpenRouter's default instead — useful when the pinned provider's shared pool is congested, at
+   the cost of comparability: the same model differs in quantisation, tokenizer and latency
+   between providers, so part of any gap becomes the provider rather than the harness. Either way
+   the provider that served each request is recorded, and a report from an unpinned run must show
+   the provider mix.
 2. **Byte-identical prompts.** Every harness gets the same `task.md`, verbatim.
 3. **No host contamination.** Per-run config/home dirs; repo-instruction discovery off; the
    real API key never enters a container.

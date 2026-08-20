@@ -7,7 +7,7 @@ they are handled, and the ones that remain.
 
 | risk | control | how it was caught |
 |---|---|---|
-| Different inference providers behind the same model id | proxy injects `provider.only`, and a run served by another provider is discarded | an unpinned probe was served by StreamLake, not DeepInfra |
+| Different inference providers behind the same model id | proxy injects `provider.only`, and a run served by another provider is discarded. With `BENCH_PROVIDER_ONLY=""` the control is deliberately dropped and the provider is recorded per run instead, so the mix is reported rather than assumed | an unpinned probe was served by StreamLake, not DeepInfra |
 | Harness self-reported token counts disagreeing with reality | all published numbers come from the wire; harness output is a cross-check only | Claude Code reports an Anthropic-price `total_cost_usd` that is fiction on this route |
 | Host config leaking into a run | per-run config/home dirs for every harness | opencode was silently loading the user's `~/.claude/skills`, `~/.agents/skills` and an installed plugin into every run |
 | Repo instructions favouring one harness | **one identical instruction file delivered to every harness** via whichever mechanism that harness natively reads; byte-equivalence of what lands in context is verified per harness | three harnesses were found silently reading host state (see below) |

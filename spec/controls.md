@@ -10,7 +10,7 @@ actually be enforced, since no two harnesses expose the same knobs.
 | field | forced to | why |
 |---|---|---|
 | `model` | the benchmark model | harnesses remap, alias, or fall back to their own default |
-| `provider.only` | one provider + quantisation, `allow_fallbacks: false` | the same model id is otherwise served by whichever provider is cheapest that minute |
+| `provider.only` | one provider + quantisation, `allow_fallbacks: false`; omitted when `BENCH_PROVIDER_ONLY=""`, which trades this control for availability when the provider's shared pool is congested | the same model id is otherwise served by whichever provider is cheapest that minute |
 | reasoning effort | one level for all | the largest single lever on output tokens; see below |
 | `temperature`, `top_p`, `top_k` | fixed | a T=0 harness against a T=1 harness is a different experiment |
 | `max_tokens` | fixed ceiling | otherwise a harness that truncates looks efficient |

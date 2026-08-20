@@ -414,7 +414,14 @@ async function runOne(harness: HarnessSpec, task: TaskMeta, attempt: number): Pr
 	// Tolerance covers rounding in the provider's own accounting, not a missed request.
 	const UNMETERED_TOLERANCE_USD = 2e-4;
 	const escaped = unmetered > UNMETERED_TOLERANCE_USD;
-	const wrongProvider = usage.providersServed.some((p) => !/deepinfra/i.test(p));
+	// Only a violation when a pin was asked for. With `BENCH_PROVIDER_ONLY=""` the routing is the
+	// provider's to choose, so a run cannot be wrong for being served elsewhere -- but the provider
+	// that served it is still recorded on every result, because an unpinned comparison is only
+	// meaningful once the reader can see which harness drew which provider.
+	const pinnedProvider = (process.env.BENCH_PROVIDER_ONLY ?? "deepinfra/fp8").trim();
+	const wrongProvider =
+		pinnedProvider !== "" &&
+		usage.providersServed.some((p) => !new RegExp(pinnedProvider.split("/")[0]!, "i").test(p));
 
 	if (violations.length > 0 || escaped || wrongProvider) {
 		const why = [

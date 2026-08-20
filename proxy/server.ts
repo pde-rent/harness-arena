@@ -41,7 +41,21 @@ if (!KEY) {
   process.exit(1);
 }
 const MODEL = process.env.MODEL || "deepseek/deepseek-v4-flash-0731";
-const PROVIDER_ONLY = process.env.BENCH_PROVIDER_ONLY || "deepinfra/fp8";
+/**
+ * Provider pin, or empty for OpenRouter's default routing.
+ *
+ * Pinning removes a confound: the same model served by different providers differs in
+ * quantisation, tokenizer and latency, so an unpinned comparison attributes part of any gap to
+ * whichever provider each harness happened to draw. Unpinned runs are still measured and still
+ * comparable within a provider -- they are simply not comparable across one, which is why the
+ * provider that served each request is recorded and reported either way.
+ *
+ * Set `BENCH_PROVIDER_ONLY=""` to route by default. The cost is stated rather than hidden: with
+ * routing free, a run cannot be discarded for being served elsewhere, so the report must carry the
+ * provider mix.
+ */
+const PROVIDER_ONLY = process.env.BENCH_PROVIDER_ONLY ?? "deepinfra/fp8";
+const PINNED = PROVIDER_ONLY.trim() !== "";
 const LOG = process.env.BENCH_LOG || "./requests.ndjson";
 const RUN_ID = process.env.BENCH_RUN_ID || "no-run-id";
 const HARNESS = process.env.BENCH_HARNESS || "unknown";
@@ -205,7 +219,7 @@ async function fetchProvider(acc: Acc) {
 type Kind = "openai" | "anthropic" | "responses";
 function rewrite(kind: Kind, body: any) {
   body.model = MODEL;
-  body.provider = { only: [PROVIDER_ONLY], allow_fallbacks: false };
+  if (PINNED) body.provider = { only: [PROVIDER_ONLY], allow_fallbacks: false };
   if (kind === "openai") {
     body.usage = { include: true };
     if (body.stream) body.stream_options = { ...(body.stream_options || {}), include_usage: true };
@@ -496,6 +510,6 @@ const server = Bun.serve({
 
 console.log(`openrouter-shim listening: http://localhost:${server.port}`);
 console.log(`  base URL for agents: http://localhost:${server.port}/v1`);
-console.log(`  model=${MODEL} provider.only=${PROVIDER_ONLY}`);
+console.log(`  model=${MODEL} provider.only=${PINNED ? PROVIDER_ONLY : "(default routing)"}`);
 console.log(`  log=${LOG} runId=${RUN_ID} harness=${HARNESS}`);
 console.log(`  tokenizer=${TOKENIZER_ID} vocab=${TOKENIZER_VOCAB} sha256=${TOKENIZER_SHA.slice(0, 16)} (offline)`);
