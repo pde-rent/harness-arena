@@ -40,9 +40,10 @@ itself.
 
 Names are the registry ids from `runner/harnesses.json` — the same strings `--harnesses` takes.
 
-A preliminary run across all thirteen, with per-harness payload and fixed context cost:
-[docs/preliminary-comparison.md](docs/preliminary-comparison.md). It measures overhead and
-wiring, not capability — the solve-rate corpus has not been run.
+Overhead and payload per harness: [docs/preliminary-comparison.md](docs/preliminary-comparison.md).
+Solve rates across the complete research corpus, 98 cells:
+[docs/research-corpus-results.md](docs/research-corpus-results.md). The remaining five task
+categories have not been run.
 
 `pi` and `oh-my-pi` are a control/treatment pair: the same pinned pi, with and without the
 extension that replaces its system prompt, so the difference between them is the extension.
