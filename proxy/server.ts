@@ -58,6 +58,11 @@ const CAPTURE_DIR = process.env.BENCH_CAPTURE_DIR || "";
 const ALLOW_UNPINNED = process.env.BENCH_ALLOW_UNPINNED === "1";
 // GET/HEAD metadata paths that cannot create a billable generation. Everything else that is
 // not a rewritable shape is refused.
+// Shared-pool congestion clears in seconds; five attempts over ~15s covers it without masking a
+// provider that is actually down.
+const RETRY_429_MAX = 5;
+const RETRY_429_BASE_MS = 500;
+
 const SAFE_READONLY = /^\/(models(\/[^/]+)*|generation|key|credits|auth(\/.*)?)$/;
 
 // Harness handshake/telemetry endpoints that carry no model, no prompt and no tokens. They are
@@ -379,17 +384,36 @@ const server = Bun.serve({
       };
     };
 
+    let retries = 0;
+    let retryWaitMs = 0;
     const base = () => ({
       ts: new Date().toISOString(), runId: RUN_ID, harness: HARNESS, requestId,
       path, model: acc.model || MODEL, providerServed: acc.provider ?? null, streamed,
       promptTokens: acc.prompt, completionTokens: acc.completion, reasoningTokens: acc.reasoning,
       cachedTokens: acc.cached, totalTokens: acc.total, costUsd: acc.cost,
+      // Non-zero only when the shared pool made us wait; subtract it before comparing latency.
+      retries, retryWaitMs,
       ...measure(),
     });
 
     let res: Response;
+    // Retry only the shared-pool 429. The pinned provider's capacity on OpenRouter is a pool shared
+    // with every other user of that provider (`limit_source: upstream_provider_shared_pool`,
+    // `is_byok: false`), so congestion is unrelated to how fast this rig sends: pacing runs does not
+    // avoid it, and a sweep otherwise loses random harnesses to someone else's traffic.
+    //
+    // Time spent waiting is recorded as `retryWaitMs` and excluded from `ttfbMs`, so a harness that
+    // happened to queue behind the pool does not read as a slow harness. The real fix is a BYOK key
+    // for the provider, which moves the account off the shared pool entirely.
     try {
-      res = await fetch(target, { method: req.method, headers, body: outBody });
+      for (;;) {
+        res = await fetch(target, { method: req.method, headers, body: outBody });
+        if (res.status !== 429 || retries >= RETRY_429_MAX) break;
+        const wait = RETRY_429_BASE_MS * 2 ** retries;
+        retries += 1;
+        retryWaitMs += wait;
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
     } catch (e: any) {
       writeRow({ ...base(), ttfbMs: null, totalMs: Math.round(performance.now() - t0), status: 0, error: String(e) });
       return new Response(JSON.stringify({ error: String(e) }), { status: 502, headers: { "content-type": "application/json" } });
