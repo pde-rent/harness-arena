@@ -416,9 +416,17 @@ async function runOne(harness: HarnessSpec, task: TaskMeta, attempt: number): Pr
 	// opencode run costing ~$0.05 was refused over $0.000237, while the same absolute figure is
 	// genuinely suspicious on a run costing a tenth of a cent. A missed request is a whole call and
 	// clears a few percent easily; provider-side rounding does not.
-	const UNMETERED_FLOOR_USD = 2e-4;
-	const UNMETERED_TOLERANCE_USD = Math.max(UNMETERED_FLOOR_USD, usage.costUsd * 0.02);
-	const escaped = unmetered > UNMETERED_TOLERANCE_USD;
+	// Recorded, not enforced per run. The provider posts a charge minutes after the request that
+	// caused it, so a single run's window cannot attribute spend to the run that made it: 7 of 20
+	// runs in a sequential sweep were discarded for a gap that matched the PREVIOUS run's cost,
+	// with nothing else touching the account. Enforcing it per run destroys valid measurements at a
+	// rate that would hollow out the matrix.
+	//
+	// The guarantee it exists to provide -- that no billable call escapes the meter -- is kept by
+	// reconciling the whole sweep at the end, where the lag falls inside the window instead of
+	// straddling its edge. A systematic leak still shows there; a lagging charge does not.
+	const escaped = false;
+	void unmetered;
 	// Only a violation when a pin was asked for. With `BENCH_PROVIDER_ONLY=""` the routing is the
 	// provider's to choose, so a run cannot be wrong for being served elsewhere -- but the provider
 	// that served it is still recorded on every result, because an unpinned comparison is only
@@ -514,6 +522,7 @@ const results: RunResult[] = existsSync(resultsPath)
 			.map((line) => JSON.parse(line) as RunResult)
 	: [];
 const alreadyRun = new Set(results.map((r) => r.runId));
+const sweepSpendBefore = dryRun ? null : await settledAccountSpendUsd();
 if (results.length > 0) console.log(`resuming: ${results.length} run(s) already recorded\n`);
 
 for (const task of tasks) {
@@ -531,6 +540,24 @@ for (const task of tasks) {
 			} catch (error) {
 				console.log(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
 			}
+		}
+	}
+}
+
+// Sweep-level reconciliation: the guarantee the per-run check used to make, at the granularity the
+// provider's accounting can actually support. Compares what the account moved across the whole
+// sweep against what the meter recorded, so a billable call that never reached the proxy shows up
+// even though a single lagging charge does not.
+if (!dryRun && sweepSpendBefore !== null) {
+	const sweepSpendAfter = await settledAccountSpendUsd();
+	const metered = results.reduce((sum, r) => sum + r.costUsd, 0);
+	if (sweepSpendAfter !== null) {
+		const gap = sweepSpendAfter - sweepSpendBefore - metered;
+		const tolerance = Math.max(2e-3, metered * 0.02);
+		console.log(`\naccount moved $${(sweepSpendAfter - sweepSpendBefore).toFixed(4)}, meter recorded $${metered.toFixed(4)}`);
+		if (gap > tolerance) {
+			console.log(`  WARNING: $${gap.toFixed(4)} of spend never reached the meter across this sweep.`);
+			console.log("  That is more than lag accounts for. Treat these results as unverified.");
 		}
 	}
 }
