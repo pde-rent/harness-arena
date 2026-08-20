@@ -83,10 +83,14 @@ const SAFE_READONLY = /^\/(models(\/[^/]+)*|generation|key|credits|auth(\/.*)?)$
 // still refused -- nothing unpinnable is proxied -- but the refusal is not a pin violation, so it
 // cannot discard an otherwise correctly pinned run.
 //
-// Claude Code calls /api/hello once at startup. Counting that as a violation threw away runs whose
-// actual model traffic was pinned exactly right, which is a false negative in the direction that
-// silently removes a harness from the comparison.
-const NON_BILLABLE_HANDSHAKE = /^\/api\/hello$/;
+// Claude Code calls /api/hello once at startup; hermes probes /api/show, an Ollama-shaped
+// model-info endpoint. Counting either as a violation threw away runs whose actual model traffic
+// was pinned exactly right, which is a false negative in the direction that silently removes a
+// harness from the comparison.
+//
+// Both are refused rather than proxied, so a harness cannot learn anything from them that would
+// change what it sends -- they carry no prompt and can bill nothing.
+const NON_BILLABLE_HANDSHAKE = /^\/api\/(hello|show)$/;
 
 const argPort = (() => {
   const i = process.argv.indexOf("--port");
