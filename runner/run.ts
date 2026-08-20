@@ -20,7 +20,7 @@
  * does), and the host-side proxy is reached at `host.containers.internal:<port>`.
  * setup.sh, verify.sh and the proxy all stay on the host.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { HarnessSpec, RunResult, TaskMeta, UsageRow } from "./types.ts";
 
@@ -497,12 +497,29 @@ console.log(
 );
 console.log(`out:       ${outDir}${dryRun ? "  (dry run — no model calls)" : ""}\n`);
 
-const results: RunResult[] = [];
 const resultsPath = join(outDir, "results.ndjson");
+
+/**
+ * Runs already recorded in this output directory, so an interrupted sweep can be relaunched
+ * without repeating them.
+ *
+ * A full matrix is hours of model calls; losing it to one interruption meant either babysitting the
+ * run or paying for the same work twice. Keyed by the same runId the results carry, so resuming
+ * cannot silently produce two rows for one cell.
+ */
+const results: RunResult[] = existsSync(resultsPath)
+	? readFileSync(resultsPath, "utf-8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line) as RunResult)
+	: [];
+const alreadyRun = new Set(results.map((r) => r.runId));
+if (results.length > 0) console.log(`resuming: ${results.length} run(s) already recorded\n`);
 
 for (const task of tasks) {
 	for (const harness of harnesses) {
 		for (let attempt = 1; attempt <= attempts; attempt += 1) {
+			if (alreadyRun.has(`${harness.id}__${task.id}__${attempt}`)) continue;
 			process.stdout.write(`${task.id} · ${harness.id} · #${attempt} … `);
 			try {
 				const result = await runOne(harness, task, attempt);
